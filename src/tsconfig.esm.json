@@ -1,0 +1,6 @@
+{
+   "extends": "@silvermine/typescript-config/tsconfig.esm.json",
+   "compilerOptions": {
+      "outDir": "../dist/esm/"
+   }
+}

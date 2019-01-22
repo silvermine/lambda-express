@@ -1,0 +1,3 @@
+{
+   "extends": "@silvermine/typescript-config/tsconfig.json"
+}

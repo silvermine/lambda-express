@@ -1,0 +1,32 @@
+Gruntfile.js
+tests/**
+
+# Coverage directory used by tools like istanbul
+coverage/**
+
+# Config files
+.eslintrc.json
+.eslintignore
+tsconfig.json
+src/tsconfig.*.json
+.mocha.opts
+.nycrc.json
+.travis.yml
+
+# Logs
+logs
+*.log
+npm-debug.log
+
+# OS
+.DS_Store
+.tmp
+
+# Serverless
+.serverless
+
+# Serverless-Webpack
+.webpack
+
+# NYC
+.nyc_output

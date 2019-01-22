@@ -1,0 +1,22 @@
+{
+   "include": [
+      "src/**/*.{ts,js}"
+   ],
+   "exclude": [
+      "**/*.d.ts"
+   ],
+   "extension": [
+      ".ts",
+      ".js"
+   ],
+   "require": [
+      "ts-node/register"
+   ],
+   "reporter": [
+      "text-summary",
+      "html",
+      "lcov"
+   ],
+   "sourceMap": true,
+   "all": true
+}
