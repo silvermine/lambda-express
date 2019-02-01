@@ -1,5 +1,4 @@
-import * as chai from 'chai';
+import chai from 'chai';
+import enableStrictlyEqual from '@silvermine/chai-strictly-equal';
 
-let strictEquals: any = require('@silvermine/chai-strictly-equal');
-
-chai.use(strictEquals);
+chai.use(enableStrictlyEqual);

@@ -5,7 +5,7 @@ export interface StringArrayOfStringsMap { [s: string]: string[] }
 export interface KeyValueStringObject { [k: string]: (string | string[] | KeyValueStringObject) }
 
 export function isStringMap(o: any): o is StringMap {
-   if (!_.isObject(o)) {
+   if (!_.isObject(o) || _.isArray(o)) { // because arrays are objects
       return false;
    }
    if (_.isEmpty(o)) {
@@ -18,7 +18,7 @@ export function isStringMap(o: any): o is StringMap {
 }
 
 export function isKeyValueStringObject(o: any): o is KeyValueStringObject {
-   if (!_.isObject(o)) {
+   if (!_.isObject(o) || _.isArray(o)) { // because arrays are objects
       return false;
    }
    if (_.isEmpty(o)) {
@@ -40,7 +40,7 @@ export function isArrayOfStrings(values: any): values is string[] {
 }
 
 export function isStringArrayOfStringsMap(o: any): o is StringArrayOfStringsMap {
-   if (!_.isObject(o)) {
+   if (!_.isObject(o) || _.isArray(o)) { // because arrays are objects
       return false;
    }
    if (_.isEmpty(o)) {
