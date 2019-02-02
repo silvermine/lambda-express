@@ -1,8 +1,14 @@
+import _ from 'underscore';
+import qs from 'qs';
+import cookie from 'cookie';
 import Application from './Application';
 import { RequestEvent, HandlerContext, RequestEventRequestContext } from './request-response-types';
-import { StringMap, KeyValueStringObject } from './utils/common-types';
+import { StringMap, KeyValueStringObject, StringArrayOfStringsMap } from './utils/common-types';
 
 export default class Request {
+
+   public static readonly SOURCE_ALB = 'ALB';
+   public static readonly SOURCE_APIGW = 'APIGW';
 
    /**
     * The application that is running this request.
@@ -58,7 +64,7 @@ export default class Request {
     * req.hostname // => "example.com"
     * ```
     */
-   public readonly hostname: string;
+   public readonly hostname: string | undefined;
 
    /**
     * When an IP address is supplied by the Lambda integration (e.g. API Gateway supplies
@@ -69,10 +75,11 @@ export default class Request {
     * this property is derived from the left-most entry in the `X-Forwarded-For` header.
     * This header can be set by the client or by the proxy.
     */
-   public readonly ip: string;
+   public readonly ip: string | undefined;
 
    /**
-    * The HTTP method used in this request (e.g. `GET`, `POST`, etc).
+    * The HTTP method used in this request (e.g. `GET`, `POST`, etc). Will always be all
+    * uppercase.
     */
    public readonly method: string;
 
@@ -143,13 +150,18 @@ export default class Request {
    public readonly path: string;
 
    /**
-    * Contains the request protocol string: either `http` or (for TLS requests) `https`.
+    * Contains the request protocol string: either `http` or (for TLS requests) `https`
+    * (always lowercase).
     *
     * When the `trust proxy` setting does not evaluate to false, this property will use
     * the value of the `X-Forwarded-Proto` header field if present. This header can be set
     * by the client or by the proxy.
+    *
+    * When the request comes from API Gateway, the protocol is `https` regardless of
+    * whether the proxy is set (the `X-Forwarded-Proto` header is not consulted) because
+    * API Gateway only supports HTTPS.
     */
-   public readonly protocol: string;
+   public readonly protocol: string | undefined;
 
    /**
     * This property is an object containing a property for each query string parameter in
@@ -208,39 +220,69 @@ export default class Request {
     */
    public readonly context: HandlerContext;
 
+   /**
+    * Flag for determining which type of event source caused this request (Application
+    * Load Balancer, `ALB`, or API Gateway, `APIGW`). See `Request.SOURCE_ALB` and
+    * `Request.SOURCE_APIGW`.
+    */
+   public readonly eventSourceType: ('ALB' | 'APIGW');
+
    // TODO: maybe some of those properties should not be read-only ... for example, how
    // would some middleware do the equivalent of an internal redirect? How does Express
    // handle that?
 
-   // properties that *may* be set in the constructor and middleware / request handlers
-   // may modify
+   /**
+    * The body of the request. If the body is an empty value (e.g. `''`), `req.body` will
+    * be `null` to make body-exists checks (e.g. `if (req.body)`) simpler.
+    *
+    * Middleware can be plugged in to support body parsing, e.g. JSON and multi-part form
+    * bodies.
+    */
    public body?: any;
+
+   private readonly _headers: StringArrayOfStringsMap;
 
    public constructor(app: Application, event: RequestEvent, context: HandlerContext) {
       this.app = app;
-      this.method = event.httpMethod;
+      this._headers = this._parseHeaders(event);
+      this.method = (event.httpMethod || '').toUpperCase();
+      this.body = this._parseBody(event.body);
 
-      // Fields that depend on headers:
-      this.cookies = {};
-      this.hostname = 'Host';
-      this.ip = 'foo';
-      this.path = 'foo';
-      this.protocol = 'foo';
-      this.query = {};
-      this.secure = false;
-      this.xhr = false;
-
-      // Fields related to routing:
-      this.baseUrl = 'foo';
-      this.originalUrl = 'foo';
-      this.params = {};
-      this.route = 'foo';
+      this.eventSourceType = ('elb' in event.requestContext) ? Request.SOURCE_ALB : Request.SOURCE_APIGW;
 
       // TODO: should something be done to limit what's exposed by these contexts? For
       // example, make properties read-only and don't expose the callback function, etc.
       this.context = context;
       this.requestContext = event.requestContext;
+
+      // Fields that depend on headers:
+      this.cookies = this._parseCookies();
+      this.hostname = this._parseHostname();
+      this.ip = this._parseIP();
+      this.protocol = this._parseProtocol();
+      this.query = this._parseQuery(event.multiValueQueryStringParameters || {}, event.queryStringParameters || {});
+      this.secure = (this.protocol === 'https');
+      this.xhr = (this.get('x-requested-with') === 'XMLHttpRequest');
+
+      // Fields related to routing:
+      this.path = 'foo';
+      this.baseUrl = 'foo';
+      this.originalUrl = 'foo';
+      this.params = {};
+      this.route = 'foo';
    }
+
+   /** CONVENIENCE FUNCTIONS */
+
+   public isALB(): boolean {
+      return this.eventSourceType === Request.SOURCE_ALB;
+   }
+
+   public isAPIGW(): boolean {
+      return this.eventSourceType === Request.SOURCE_APIGW;
+   }
+
+   /** INTERFACE FUNCTIONS */
 
    /**
     * Returns the specified HTTP request header field (case-insensitive match). The
@@ -253,8 +295,8 @@ export default class Request {
     *
     * @param headerName the name of the header to get
     */
-   public get(headerName: string): string {
-      return `TODO: return value for ${headerName}`;
+   public get(headerName: string): string | undefined {
+      return _.last(this._headers[this._getHeaderKey(headerName)]);
    }
 
    /**
@@ -262,8 +304,8 @@ export default class Request {
     *
     * @param headerName the name of the header to get
     */
-   public header(headerName: string): string {
-      return this.get(headerName);
+   public header(headerName: string): string | undefined {
+      return this.get(this._getHeaderKey(headerName));
    }
 
    /**
@@ -273,8 +315,119 @@ export default class Request {
     *
     * @param headerName the name of the header to get
     */
-   public headerAll(headerName: string): string[] {
-      return [ `TODO: ${headerName}`, `TODO: ${headerName}` ];
+   public headerAll(headerName: string): string[] | undefined {
+      return this._headers[this._getHeaderKey(headerName)];
    }
 
+   /** EVENT PARSING FUNCTIONS */
+
+   private _parseBody(body: string | null): any {
+      if (!body || _.isEmpty(body)) {
+         return null;
+      }
+
+      // TODO: add support for other content types
+      if (this._getContentTypeEssence() === 'application/json') {
+         try {
+            // TODO: by default we are suppressing body-parsing errors, but we should
+            // allow the user to get them somehow ... logging, error handling or something
+            return JSON.parse(body);
+         } catch(err) {
+            return null;
+         }
+      }
+
+      return body;
+   }
+
+   private _getContentTypeEssence(): string | undefined {
+      const type = this.get('content-type');
+
+      return _.isString(type) ? type.replace(/;.*/, '').trim().toLowerCase() : undefined;
+   }
+
+   private _parseHeaders(evt: RequestEvent): StringArrayOfStringsMap {
+      const headers = evt.multiValueHeaders || _.mapObject(evt.headers, (v) => { return [ v ]; });
+
+      return _.reduce(headers, (memo: StringArrayOfStringsMap, v, k) => {
+         const key = k.toLowerCase();
+
+         memo[key] = v;
+
+         if (key === 'referer') {
+            memo.referrer = v;
+         } else if (key === 'referrer') {
+            memo.referer = v;
+         }
+
+         return memo;
+      }, {});
+   }
+
+   private _parseCookies(): StringMap {
+      const cookieHeader = this.get('cookie') || '';
+
+      if (_.isEmpty(cookieHeader)) {
+         return {};
+      }
+
+      return cookie.parse(cookieHeader);
+   }
+
+   private _parseHostname(): string | undefined {
+      const host = (this.get('host') || '').replace(/:[0-9]*$/, '');
+
+      return _.isEmpty(host) ? undefined : host;
+   }
+
+   private _parseIP(): string | undefined {
+      if ('identity' in this.requestContext && !_.isEmpty(this.requestContext.identity.sourceIp)) {
+         return this.requestContext.identity.sourceIp;
+      }
+
+      if (!this.app.isEnabled('trust proxy')) {
+         return;
+      }
+
+      let ip = (this.get('x-forwarded-for') || '').replace(/,.*/, '');
+
+      return _.isEmpty(ip) ? undefined : ip;
+   }
+
+   private _parseProtocol(): string | undefined {
+      if (this.isAPIGW()) {
+         return 'https';
+      }
+
+      if (this.app.isEnabled('trust proxy')) {
+         const header = this.get('x-forwarded-proto') || '';
+
+         return _.isEmpty(header) ? undefined : header.toLowerCase();
+      }
+   }
+
+   private _parseQuery(multiValQuery: StringArrayOfStringsMap, query: StringMap): KeyValueStringObject {
+      let queryString;
+
+      if (_.isEmpty(multiValQuery)) {
+         queryString = _.reduce(query, (memo, v, k) => {
+            return memo + `&${k}=${v}`;
+         }, '');
+      } else {
+         queryString = _.reduce(multiValQuery, (memo, vals, k) => {
+            _.each(vals, (v) => {
+               memo += `&${k}=${v}`;
+            });
+            return memo;
+         }, '');
+      }
+
+      return qs.parse(queryString);
+   }
+
+   private _getHeaderKey(headerName: string): string {
+      let key = headerName.toLowerCase();
+
+      return (key === 'referrer') ? 'referer' : key;
+   }
 }

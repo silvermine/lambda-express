@@ -38,10 +38,18 @@ export default class Application extends Router {
    }
 
    /**
-    * See `app.setSetting(k, v)`.
+    * See `app.setSetting(name, val)`.
     */
    public getSetting(name: string): any {
       return this._settings[name];
+   }
+
+   /**
+    * See `app.enable(name)` and `app.disable(name)`.
+    * @param name the name of the setting to test
+    */
+   public isEnabled(name: string): boolean {
+      return !!this.getSetting(name);
    }
 
    /**
@@ -53,11 +61,11 @@ export default class Application extends Router {
    }
 
    /**
-    * Disable a setting with `key`, e.g. `app.enable('trust proxy')`.
-    * @param key setting key
+    * Disable a setting with `key`, e.g. `app.disable('trust proxy')`.
+    * @param name setting key
     */
-   public disable(key: string): Application {
-      return this.setSetting(key, false);
+   public disable(name: string): Application {
+      return this.setSetting(name, false);
    }
 
    /**
