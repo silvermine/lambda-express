@@ -1,4 +1,9 @@
-import { APIGatewayEventRequestContext as OrigAPIGatewayEventRequestContext, APIGatewayProxyEvent, Context } from 'aws-lambda';
+import {
+   APIGatewayEventRequestContext as OrigAPIGatewayEventRequestContext,
+   APIGatewayProxyEvent,
+   Context,
+   APIGatewayProxyResult,
+} from 'aws-lambda';
 import { StringMap, StringArrayOfStringsMap } from './utils/common-types';
 
 /* COMBO TYPES */
@@ -13,6 +18,11 @@ export type RequestEvent = ApplicationLoadBalancerRequestEvent | APIGatewayReque
  * The "request context", which is accessible at `evt.requestContext`.
  */
 export type RequestEventRequestContext = APIGatewayEventRequestContext | ApplicationLoadBalancerEventRequestContext;
+
+export interface ResponseResult extends APIGatewayProxyResult {
+   multiValueHeaders: StringArrayOfStringsMap;
+   statusDescription?: string;
+}
 
 /**
  * The `context` object passed to a Lambda handler.
@@ -56,47 +66,60 @@ export interface ApplicationLoadBalancerEventRequestContext {
 export interface CookieOpts {
 
    /**
-    * Domain name for the cookie. Defaults to the domain name of the app.
+    * Domain name for the cookie. By default, no domain is set, and most clients will
+    * consider the cookie to apply to only the current domain.
     */
-   domain: string;
+   domain?: string;
 
    /**
     * A synchronous function used for cookie value encoding. Defaults to
     * [encodeURIComponent](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent).
     */
-   encode: (v: string) => string;
+   encode?: (v: string) => string;
 
    /**
-    * Expiry date of the cookie. If not provided, creates a session cookie.
+    * Expiry date of the cookie. If not provided, creates a session cookie. See notes on
+    * `maxAge`.
     */
-   expires: Date;
+   expires?: Date;
 
    /**
     * Flags the cookie to be accessible only by the web server. Defaults to `true`.
     */
-   httpOnly: boolean;
+   httpOnly?: boolean;
 
    /**
     * Convenient option for setting the expiry time relative to the current time in
-    * milliseconds. If both `expires` and `maxAge` are supplied, `expires` is used.
+    * milliseconds.
+    *
+    * By default, no expiration is set, and most clients will consider this a
+    * "non-persistent cookie" and will delete it on a condition like exiting a web browser
+    * application.
+    *
+    * Note that the [cookie storage model
+    * specification](https://tools.ietf.org/html/rfc6265#section-5.3) states that if both
+    * `expires` and `maxAge` are set, then `maxAge` takes precedence, but it is possible
+    * not all clients obey this, so if both are set, they should point to the same date
+    * and time. Thus, if you set both `maxAge` and `expires`, the `maxAge` value will be
+    * used to override your `expires` so that both values are guaranteed to be the same.
     */
-   maxAge: number;
+   maxAge?: number;
 
    /**
     * Path for the cookie. Defaults to `/`.
     */
-   path: string;
+   path?: string;
 
    /**
     * Marks the cookie to be used with HTTPS only.
     */
-   secure: boolean;
+   secure?: boolean;
 
    /**
     * Value of the `SameSite` `Set-Cookie` attribute. More information at
     * https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00#section-4.1.1.
     */
-   sameSite: (boolean | string);
+   sameSite?: (boolean | 'lax' | 'strict' | undefined);
 
    // TODO: look at adding cookie signing functionality:
    // https://expressjs.com/en/api.html#res.cookie

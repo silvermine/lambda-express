@@ -1,24 +1,19 @@
 import _ from 'underscore';
+import cookie from 'cookie';
 import { Application, Request } from '.';
 import { StringMap, isStringMap, StringArrayOfStringsMap } from './utils/common-types';
-import { CookieOpts } from './request-response-types';
+import { CookieOpts, ResponseResult } from './request-response-types';
+import { StatusCodes } from './status-codes';
 import { Callback } from 'aws-lambda';
-
-/**
- * Valid HTTP status codes for redirection.
- * @see https://www.ietf.org/assignments/http-status-codes/http-status-codes.xml
- */
-type RedirectCode = 300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308;
-
 
 export default class Response {
 
    public readonly app: Application;
-   public readonly headersSent: boolean;
+   public headersSent: boolean = false;
 
    // properties used internally in the class
    private readonly _request: Request;
-   private _body: string | null = null;
+   private _body: string = '';
    private _statusCode: number = 200;
    private _statusMessage: string = 'OK';
    private _headers: StringArrayOfStringsMap = {};
@@ -28,12 +23,11 @@ export default class Response {
 
    public constructor(app: Application, req: Request, cb: Callback) {
       this.app = app;
-      this.headersSent = false;
       this._request = req;
       this._lambdaCallback = cb;
    }
 
-   // FUNCTIONS RELATED TO SETTING RESPONSE HEADERS AND CODES THAT DO NOT SEND RESPONSES
+   // METHODS RELATED TO SETTING RESPONSE HEADERS AND CODES THAT DO NOT SEND RESPONSES
 
    /**
     * Sets the response's HTTP header field to value. To set multiple fields at once, pass
@@ -52,6 +46,9 @@ export default class Response {
    public set(headers: StringMap): Response;
    public set(key: string, value: string): Response;
    public set(arg0: (StringMap | string), arg1?: string): Response {
+      if (this.headersSent) {
+         throw new Error('Can\'t set headers after they are sent.');
+      }
       if (_.isString(arg0) && _.isString(arg1)) {
          this._headers[arg0] = [ arg1 ];
       } else if (isStringMap(arg0)) {
@@ -81,7 +78,20 @@ export default class Response {
     *               specified response header
     */
    public append(key: string, values: (string | string[])): Response {
-      console.log(key, values); // eslint-disable-line no-console
+      if (this.headersSent) {
+         throw new Error('Can\'t set headers after they are sent.');
+      }
+
+      if (!(key in this._headers)) {
+         this._headers[key] = [];
+      }
+
+      if (_.isArray(values)) {
+         _.each(values, (v) => { this._headers[key].push(v); });
+      } else {
+         this._headers[key].push(values); // single string
+      }
+
       return this;
    }
 
@@ -97,13 +107,21 @@ export default class Response {
    }
 
    /**
+    * Returns true if response has a header by the name `name`.
+    */
+   public hasHeader(name: string): boolean {
+      return !!(name in this._headers);
+   }
+
+   /**
     * Sets the [HTTP status
     * code](https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html).
     *
     * @param code the status code to send with the response
     */
    public status(code: number): Response {
-      console.log(code); // eslint-disable-line no-console
+      this._statusCode = code;
+      this._statusMessage = StatusCodes[code] || String(code);
       return this;
    }
 
@@ -152,13 +170,21 @@ export default class Response {
     * ```
     *
     * Would result in this header:
-    * `Link: <http://api.example.com/users?page=2>; rel="next", <http://api.example.com/users?page=5>; rel="last"`
+    * ```
+    * Link: <http://api.example.com/users?page=2>; rel="next", <http://api.example.com/users?page=5>; rel="last"
+    * ```
+    *
+    * Note that any subsequent call to `resp.links(...)` will *overwrite* the values that
+    * were already in the header.
     *
     * @param links The links to send in the `Link` response header
     */
    public links(links: StringMap): Response {
-      console.log(links); // eslint-disable-line no-console
-      return this;
+      return this.set('Link', _.reduce(links, (memo, v, k) => {
+         const prefix = (memo === '' ? '' : ', ');
+
+         return memo + `${prefix}<${v}>; rel="${k}"`;
+      }, ''));
    }
 
    /**
@@ -179,7 +205,13 @@ export default class Response {
     * @param path path to redirect to (or `back` - see above)
     */
    public location(path: string): Response {
-      this.set('Location', path);
+      let value = path;
+
+      if (path === 'back') {
+         value = this._request.get('referer') || '/';
+      }
+
+      this.set('Location', value);
       return this;
    }
 
@@ -190,12 +222,19 @@ export default class Response {
     * TODO: how does a user see the documentation for `CookieOpts`?
     *
     * @param name the name of the cookie
-    * @param value the value of the cookie
-    * @param opts the options (such as domain, path, etc)
+    * @param userVal the value of the cookie
+    * @param userOpts the options (such as domain, path, etc)
     */
-   public cookie(name: string, value: string, opts?: CookieOpts): Response {
-      console.log(name, value, opts); // eslint-disable-line no-console
-      return this;
+   public cookie(name: string, userVal: string, userOpts?: CookieOpts): Response {
+      const opts = _.extend({ path: '/' }, userOpts) as CookieOpts,
+            value = (_.isObject(userVal) ? `j:${JSON.stringify(userVal)}` : String(userVal));
+
+      if (opts.maxAge !== undefined) {
+         opts.expires = new Date(Date.now() + opts.maxAge);
+         opts.maxAge = (opts.maxAge / 1000); // cookie lib takes seconds, not millis
+      }
+
+      return this.append('Set-Cookie', cookie.serialize(name, value, opts));
    }
 
    /**
@@ -203,14 +242,13 @@ export default class Response {
     * `res.cookie()`.
     *
     * @param name the name of the cookie
-    * @param opts the options (such as domain, path, etc)
+    * @param userOpts the options (such as domain, path, etc)
     */
-   public clearCookie(name: string, opts: CookieOpts): Response {
-      console.log(name, opts); // eslint-disable-line no-console
-      return this;
+   public clearCookie(name: string, userOpts?: CookieOpts): Response {
+      return this.cookie(name, '', _.extend({ expires: new Date(1), path: '/' }, userOpts));
    }
 
-   // FUNCTIONS RELATED TO SENDING RESPONSES
+   // METHODS RELATED TO SENDING RESPONSES
 
    /**
     * Add a listener that will get called just before headers are written to the response.
@@ -255,7 +293,17 @@ export default class Response {
       return this;
    }
 
-   // FUNCTIONS THAT SEND RESPONSES
+   // HELPER METHODS
+
+   public isALB(): boolean {
+      return this._request.isALB();
+   }
+
+   public isAPIGW(): boolean {
+      return this._request.isAPIGW();
+   }
+
+   // METHODS THAT SEND RESPONSES
 
    /**
     * Ends the response process by calling the Lambda callback with the response headers
@@ -265,13 +313,54 @@ export default class Response {
     * instead use methods such as `res.send()` and `res.json()`.
     */
    public end(): Response {
-      // We will need to use the request in our response - at least to determine if this
-      // is an ALB or APIGW invocation so that we can respond correctly
-      console.log(this._request, this._lambdaCallback, this._body); // eslint-disable-line no-console
-      // Also, call listeners for before/after write.
-      // Also, set headersSent
-      // TODO: This is where we will actually create the response object that Lambda needs
-      // for APIGW/ALB integration and invoke the callback with it.
+      _.each(this._beforeWriteHeadersListeners, (l) => { l(); });
+
+      const output: ResponseResult = {
+         isBase64Encoded: false,
+         statusCode: this._statusCode,
+         multiValueHeaders: { ...this._headers },
+         body: this._body,
+      };
+
+      if (this.isALB()) {
+         // There are some differences in the response format between APIGW and ALB. See
+         // https://serverless-training.com/articles/api-gateway-vs-application-load-balancer-technical-details/#application-load-balancer-response-event-format-differences
+
+         // 1) If you're running your Lambda behind Application Load Balancer, the ELB/ALB
+         //    requires the statusDescription. However, API Gateway will throw an error
+         //    (respond with "Internal server error") if you include a statusDescription
+         //    field in your response for APIGW. ¯\_(ツ)_/¯.
+         output.statusDescription = (this._statusCode + ' ' + this._statusMessage);
+
+         // 2) With ELB you *must* supply either `headers` or `multiValueHeaders`,
+         //    depending on the type of request that invoked the function. If the request
+         //    had a `multiValueHeaders` field in it, it means that the
+         //    `lambda.multi_value_headers.enabled` attribute is `true` on the ELB, and
+         //    you *must* supply `multiValueHeaders`. If there was no `multiValueHeaders`
+         //    in the request, then the value for the `lambda.multi_value_headers.enabled`
+         //    attribute was `false`, and you *must* supply `headers`. The ELB does not
+         //    complain if you supply *both* fields, so we just default to doing that
+         //    because it's the safest thing to do. Note that even if you have no headers
+         //    to send, you must at least supply an empty object (`{}`) for ELB, whereas
+         //    with APIGW it's okay to send `null`.
+         output.headers = _.reduce(output.multiValueHeaders, (memo, v, k) => {
+            memo[k] = v[v.length - 1];
+            return memo;
+         }, {} as StringMap);
+
+         // Finally, note that ELB requires that all header values be strings already,
+         // whereas APIGW will allow booleans / integers as values, which it would then
+         // convert. As long as you're using this library from a TypeScript project, the
+         // method signatures to add headers to the response will enforce this string-only
+         // rule. However, if someone is using the library in JS and ignoring the types,
+         // they could potentially `resp.set('Foo', 1234)`, which could cause them a
+         // problem if they're using this behind ALB; that's on them I suppose. ¯\_(ツ)_/¯
+      }
+
+      this._lambdaCallback(undefined, output);
+      this.headersSent = true;
+
+      _.each(this._afterWriteListeners, (l) => { l(); });
       return this;
    }
 
@@ -289,31 +378,36 @@ export default class Response {
     * @param o the object to send in the response
     */
    public json(o: any): Response {
-      console.log(o); // eslint-disable-line no-console
-      return this;
+      this._body = JSON.stringify(o);
+      return this.type('application/json; charset=utf-8').end();
    }
 
    /**
     * Sends a JSON response with JSONP support. This method is identical to `res.json()`,
     * except that it opts-in to JSONP callback support.
     *
-    * By default, the JSONP callback name is simply `callback`. Optionally, you can pass a
-    * second argument to specify the query string parameter from which to get the callback
-    * name.
-    *
-    * TODO: Figure out how we want to allow application-wide overrides of the callback
-    * name. Express says this: Override this with the `jsonp callback name` setting.
+    * The JSONP function name that will be invoked should be sent in the query string of
+    * the request. The query string parameter, by default, is simply `callback` (e.g.
+    * `/some-url?callback=myFunction`). To override the name of the query string
+    * parameter, set the application setting named `jsonp callback name`. For example,
+    * `app.setSetting('jsonp callback name', 'cb')` would support URLs like
+    * `/some-url?cb=myFunction`.
     *
     * Calling this method ends (sends) the response, after which headers can not be
     * changed and more data can not be sent.
     *
     * @param o the object to send in the response
-    * @param paramName the query string parameter to get the name of the callback function
-    *                  from
     */
-   public jsonp(o: any, paramName: string): Response {
-      console.log(o, paramName); // eslint-disable-line no-console
-      return this;
+   public jsonp(o: any): Response {
+      const queryParamName = this.app.getSetting('jsonp callback name') || 'callback',
+            callbackFunctionName = this._request.query[queryParamName];
+
+      if (_.isString(callbackFunctionName)) {
+         this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${JSON.stringify(o)});`;
+         return this.type('text/javascript; charset=utf-8').end();
+      }
+
+      return this.json(o);
    }
 
    /**
@@ -335,7 +429,7 @@ export default class Response {
     * @param path The path to redirect to (including `back` - see `res.location()`)
     * @see https://www.ietf.org/assignments/http-status-codes/http-status-codes.xml
     */
-   public redirect(code: RedirectCode, path: string): Response;
+   public redirect(code: number, path: string): Response;
    public redirect(path: string): Response;
    public redirect(...args: any[]): Response {
       let code = 302,
@@ -356,8 +450,11 @@ export default class Response {
     *
     * The body parameter can be a `Buffer` object, a `string`, an `object`, or an `array`.
     *
-    * This method automatically assigns the `Content-Length` HTTP response header field
-    * (unless previously set).
+    * Unlike Express, this method will not set the `Content-Length` header because API
+    * Gateway and Application Load Balancer already handle that when they get the response
+    * from the Lambda function (because the function must return the entire response and
+    * can not stream a response back, there's no situation where APIGW/ALB can't compute
+    * the length before they send the headers).
     *
     * TODO: evaluate whether we should do the other "useful tasks" that Express does, e.g.
     * [it] "provides automatic HEAD and HTTP cache freshness support". See
@@ -366,7 +463,8 @@ export default class Response {
     * When the parameter is a `Buffer` object, the method sets the Content-Type response
     * header field to `application/octet-stream`, unless previously set.
     *
-    * When the parameter is a `string`, the method sets the Content-Type to `text/html`.
+    * When the parameter is a `string`, the method sets the Content-Type to `text/html`
+    * (unless the type has already been set).
     *
     * When the parameter is an `array` or `object`, Express responds with the JSON
     * representation. (See `res.json`)
@@ -377,8 +475,25 @@ export default class Response {
     * @param body the response body to send
     */
    public send(body: (Buffer | string | object | [])): Response {
-      console.log(typeof body); // eslint-disable-line no-console
-      return this;
+      let type: string | null = null;
+
+      if (Buffer.isBuffer(body)) {
+         type = 'application/octet-stream';
+         // isBase64Encoded will need to be true
+         // this._body = body; // toString??
+         throw new Error('TODO: Buffer sending is not yet supported');
+      } else if (_.isString(body)) {
+         type = 'text/html';
+         this._body = body;
+      } else {
+         return this.json(body);
+      }
+
+      if (type !== null && !this.hasHeader('Content-Type')) {
+         this.type(type);
+      }
+
+      return this.end();
    }
 
 
@@ -407,11 +522,10 @@ export default class Response {
     * @param code the status code to send, with its standard string response
     */
    public sendStatus(code: number): Response {
-      console.log(code); // eslint-disable-line no-console
-      return this;
+      return this.status(code).end();
    }
 
-   // TODO: look at adding functions:
+   // TODO: look at adding methods:
    // download: https://expressjs.com/en/api.html#res.download
    // attachment: https://expressjs.com/en/api.html#res.attachment
    // format: https://expressjs.com/en/api.html#res.format
