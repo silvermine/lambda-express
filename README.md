@@ -1,5 +1,7 @@
 # Lambda Express
 
+[![NPM Version](https://img.shields.io/npm/v/@silvermine/lambda-express.svg)](https://www.npmjs.com/package/@silvermine/lambda-express)
+[![License](https://img.shields.io/github/license/silvermine/lambda-express.svg)](./LICENSE)
 [![Build Status](https://travis-ci.com/silvermine/lambda-express.svg?branch=master)](https://travis-ci.com/silvermine/lambda-express)
 [![Coverage Status](https://coveralls.io/repos/github/silvermine/lambda-express/badge.svg?branch=master)](https://coveralls.io/github/silvermine/lambda-express?branch=master)
 [![Dependency Status](https://david-dm.org/silvermine/lambda-express.svg)](https://david-dm.org/silvermine/lambda-express)
