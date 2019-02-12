@@ -184,18 +184,6 @@ export default class Request {
    public readonly query: KeyValueStringObject;
 
    /**
-    * Contains the currently-matched route as a string. For example:
-    *
-    * ```
-    * app.get('/user/:id?', function userIdHandler(req, res) {
-    *   console.log(req.route); // => '/user/:id?'
-    *   res.send('GET');
-    * });
-    * ```
-    */
-   public readonly route: string;
-
-   /**
     * A Boolean property that is `true` if a TLS connection is established. Equivalent to
     * `'https' == req.protocol`.
     */
@@ -269,7 +257,6 @@ export default class Request {
       this.baseUrl = 'foo';
       this.originalUrl = 'foo';
       this.params = {};
-      this.route = 'foo';
    }
 
    /** CONVENIENCE FUNCTIONS */
