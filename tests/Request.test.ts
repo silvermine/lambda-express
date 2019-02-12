@@ -62,51 +62,52 @@ describe('Request', () => {
             expect(req.headerAll('FoO')).to.eql([ 'bar', 'baz' ]);
          });
       });
-   });
 
-   it('works with single-value headers provided in the event (and is case-insensitive)', () => {
-      let req = new Request(app, albRequest(), handlerContext());
+      it('works with single-value headers provided in the event (and is case-insensitive)', () => {
+         let req = new Request(app, albRequest(), handlerContext());
 
-      // header that only has one value
-      expect(req.get('User-Agent')).to.strictlyEqual('curl/7.54.0');
-      expect(req.header('User-Agent')).to.strictlyEqual('curl/7.54.0');
-      expect(req.headerAll('User-Agent')).to.eql([ 'curl/7.54.0' ]);
+         // header that only has one value
+         expect(req.get('User-Agent')).to.strictlyEqual('curl/7.54.0');
+         expect(req.header('User-Agent')).to.strictlyEqual('curl/7.54.0');
+         expect(req.headerAll('User-Agent')).to.eql([ 'curl/7.54.0' ]);
 
-      // header with multiple values
-      expect(req.get('Foo')).to.strictlyEqual('baz');
-      expect(req.header('Foo')).to.strictlyEqual('baz');
-      expect(req.headerAll('Foo')).to.eql([ 'baz' ]);
+         // header with multiple values
+         expect(req.get('Foo')).to.strictlyEqual('baz');
+         expect(req.header('Foo')).to.strictlyEqual('baz');
+         expect(req.headerAll('Foo')).to.eql([ 'baz' ]);
 
-      // case insensitivity
-      expect(req.get('User-Agent')).to.strictlyEqual('curl/7.54.0');
-      expect(req.header('user-agent')).to.strictlyEqual('curl/7.54.0');
-      expect(req.headerAll('UseR-AgeNT')).to.eql([ 'curl/7.54.0' ]);
-      expect(req.headerAll('FoO')).to.eql([ 'baz' ]);
+         // case insensitivity
+         expect(req.get('User-Agent')).to.strictlyEqual('curl/7.54.0');
+         expect(req.header('user-agent')).to.strictlyEqual('curl/7.54.0');
+         expect(req.headerAll('UseR-AgeNT')).to.eql([ 'curl/7.54.0' ]);
+         expect(req.headerAll('FoO')).to.eql([ 'baz' ]);
 
-      // non-existent headers
-      expect(req.header('bar')).to.eql(undefined);
-      expect(req.header('Bar')).to.eql(undefined);
-   });
-
-   it('works if no headers exist in the event', () => {
-      _.each(allEventTypes, (evt) => {
-         delete evt.headers;
-         delete evt.multiValueHeaders;
-         const req = new Request(app, evt, handlerContext());
-
-         expect(req.header('foo')).to.eql(undefined);
-         expect(req.header('Foo')).to.eql(undefined);
+         // non-existent headers
+         expect(req.header('bar')).to.eql(undefined);
+         expect(req.header('Bar')).to.eql(undefined);
       });
-   });
 
-   it('handles the Referer/Referrer problem (and is case-insensitive with it)', () => {
-      _.each(allRequestTypes, (req) => {
-         _.each([ 'Referer', 'Referrer', 'referer', 'referrer', 'ReFeReR', 'ReFeRrEr' ], (key) => {
-            expect(req.get(key)).to.eql('https://en.wikipedia.org/wiki/HTTP_referer');
-            expect(req.header(key)).to.eql('https://en.wikipedia.org/wiki/HTTP_referer');
-            expect(req.headerAll(key)).to.eql([ 'https://en.wikipedia.org/wiki/HTTP_referer' ]);
+      it('works if no headers exist in the event', () => {
+         _.each(allEventTypes, (evt) => {
+            delete evt.headers;
+            delete evt.multiValueHeaders;
+            const req = new Request(app, evt, handlerContext());
+
+            expect(req.header('foo')).to.eql(undefined);
+            expect(req.header('Foo')).to.eql(undefined);
          });
       });
+
+      it('handles the Referer/Referrer problem (and is case-insensitive with it)', () => {
+         _.each(allRequestTypes, (req) => {
+            _.each([ 'Referer', 'Referrer', 'referer', 'referrer', 'ReFeReR', 'ReFeRrEr' ], (key) => {
+               expect(req.get(key)).to.eql('https://en.wikipedia.org/wiki/HTTP_referer');
+               expect(req.header(key)).to.eql('https://en.wikipedia.org/wiki/HTTP_referer');
+               expect(req.headerAll(key)).to.eql([ 'https://en.wikipedia.org/wiki/HTTP_referer' ]);
+            });
+         });
+      });
+
    });
 
    describe('cookie functionality', () => {
