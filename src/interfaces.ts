@@ -29,12 +29,14 @@ export interface RequestProcessor {
    /**
     * For use by middleware and request handlers. Typically middleware will be declared as
     * taking all three arguments (including the `next` callback function), whereas request
-    * handlers (for a given route) typically do not need the the `next` callback function.
-    * Any function passed to `use`, `get`, and other route-handling methods will have its
-    * arity inspected; if it takes three arguments, it will be passed a `next` callback
-    * and *MUST* call the callback or a response-sending function (e.g. `send`, `body`, or
-    * `json`) on the response in order to complete the processing. Failure to either send
-    * a response or call `next` will result in a hung process.
+    * handlers (for a given route) typically do not need the `next` callback function
+    * because they will call a method on the response that completes the request.
+    *
+    * All functions passed to `use`, `get`, and other route-handling methods will be
+    * passed a `next` callback and *MUST* call the callback or a response-sending function
+    * (e.g. `send`, `body`, or `json`) on the response in order to complete the
+    * processing. Failure to either send a response or call `next` will result in a hung
+    * process.
     *
     * @param req The request to be handled
     * @param resp The response that will be sent when the request-handling process is
@@ -93,6 +95,8 @@ export interface RouterOptions {
 }
 
 export interface IRouter {
+
+   readonly routerOptions: RouterOptions;
 
    /**
     * Add request processors to all requests on the given path - regardless of request
@@ -155,5 +159,13 @@ export interface IRouter {
     *                 method
     */
    mount(method: string, path: PathParams, ...handlers: ProcessorOrProcessors[]): this;
+
+
+   /**
+    * Handles a request, optionally starting it with an error (for use when this router is
+    * not the first request processor to have handled the request, and a previous one
+    * already generated an error).
+    */
+   handle(err: any, req: Request, resp: Response, done: NextCallback): void;
 
 }

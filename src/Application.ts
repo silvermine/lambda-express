@@ -28,12 +28,21 @@ export default class Application extends Router {
     *  * `trust proxy` (default `false`): Determines whether `X-Forwarded-*` headers are
     *    trusted or not. Be careful when enabling this setting because these headers are
     *    easily spoofed.
+    *  * `case sensitive routing` (default `false`): Determines whether routing is
+    *    case-sensitive. When enabled, "/Foo" and "/foo" are different routes. When
+    *    disabled, "/Foo" and "/foo" are treated the same. NOTE: Sub-apps (routers mounted
+    *    by calling `addSubRouter`, or those created implicitly by calling `.route(path)`)
+    *    will inherit the value of this setting.
     *
     * @param name The name of the setting
     * @param val The value to assign to the setting
     */
    public setSetting(name: string, val: any): Application {
       this._settings[name] = val;
+
+      if (name === 'case sensitive routing') {
+         this.routerOptions.caseSensitive = !!val;
+      }
       return this;
    }
 
@@ -75,12 +84,18 @@ export default class Application extends Router {
     * @param context The context provided to the Lambda handler
     * @param cb The callback provided to the Lambda handler
     */
-   public async run(evt: RequestEvent, context: HandlerContext, cb: Callback): Promise<void> {
+   public run(evt: RequestEvent, context: HandlerContext, cb: Callback): void {
       const req = new Request(this, evt, context),
             resp = new Response(this, req, cb);
 
-      console.log(evt, context, req, resp); // eslint-disable-line no-console
-      cb(undefined, {});
+      this.handle(undefined, req, resp, (err: any): void => {
+         // handler of last resort:
+         if (err) {
+            resp.sendStatus(500);
+         } else {
+            resp.sendStatus(404);
+         }
+      });
    }
 
 }

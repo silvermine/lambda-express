@@ -52,6 +52,7 @@
    },
    "dependencies": {
       "cookie": "0.3.1",
+      "path-to-regexp": "3.0.0",
       "qs": "6.6.0",
       "tslib": "1.9.3",
       "underscore": "1.9.1"

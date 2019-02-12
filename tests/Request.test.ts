@@ -38,6 +38,30 @@ describe('Request', () => {
 
    });
 
+   describe('makeSubRequest', () => {
+
+      it('sets URL related fields correctly', () => {
+         _.each(allRequestTypes, (req) => {
+            const sub = req.makeSubRequest('/echo');
+
+            expect(sub.baseUrl).to.eql('/echo');
+            expect(sub.originalUrl).to.eql('/echo/asdf/a');
+            expect(sub.path).to.eql('/asdf/a');
+            expect(sub.url).to.eql('/asdf/a');
+         });
+      });
+
+      it('sets params correctly, and frozen', () => {
+         _.each(allRequestTypes, (req) => {
+            const sub = req.makeSubRequest('/echo', { foo: 'asdf' });
+
+            expect(sub.params).to.eql({ foo: 'asdf' });
+            expect(() => { (sub.params as any).bar = 'x'; }).to.throw('Cannot add property bar, object is not extensible');
+         });
+      });
+
+   });
+
    describe('header functionality', () => {
 
       it('works with multi-value headers provided in the event (and is case-insensitive)', () => {
