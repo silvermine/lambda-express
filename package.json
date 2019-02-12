@@ -24,7 +24,7 @@
    },
    "devDependencies": {
       "@silvermine/chai-strictly-equal": "1.1.0",
-      "@silvermine/eslint-config": "2.0.0-rc6",
+      "@silvermine/eslint-config": "2.0.0",
       "@silvermine/typescript-config": "0.9.0",
       "@types/aws-lambda": "8.10.17",
       "@types/chai": "4.1.7",
