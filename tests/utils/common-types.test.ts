@@ -27,7 +27,6 @@ describe('common types', () => {
    describe('isStringMap', () => {
 
       it('correctly classifies objects', () => {
-         // TODO: `sed 's|\.eql|.strictlyEqual|' in this whole file
          expect(t.isStringMap({})).to.strictlyEqual(true);
          expect(t.isStringMap({ a: 'b', c: 'd' })).to.strictlyEqual(true);
          expect(t.isStringMap({ a: 4 })).to.strictlyEqual(false);
