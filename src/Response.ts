@@ -5,6 +5,7 @@ import { StringMap, isStringMap, StringArrayOfStringsMap } from './utils/common-
 import { CookieOpts, ResponseResult } from './request-response-types';
 import { StatusCodes } from './status-codes';
 import { Callback } from 'aws-lambda';
+import mimeLookup from './mime/mimeLookup';
 
 export default class Response {
 
@@ -152,7 +153,11 @@ export default class Response {
     * @param type the content type of the response
     */
    public type(type: string): Response {
-      this.set('Content-Type', type);
+      if (type.indexOf('/') === -1) {
+         this.set('Content-Type', mimeLookup(type) || type);
+      } else {
+         this.set('Content-Type', type);
+      }
       return this;
    }
 

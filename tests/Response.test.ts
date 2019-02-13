@@ -183,7 +183,7 @@ describe('Request', () => {
 
    describe('type', () => {
 
-      it('sets the Content-Type header', () => {
+      it('sets the Content-Type header with exact value when given a type *with* a "/"', () => {
          expect(sampleResp.getHeaders()).to.eql({});
 
          sampleResp.type('application/json');
@@ -194,6 +194,41 @@ describe('Request', () => {
          sampleResp.type('text/plain');
          expect(sampleResp.getHeaders()).to.eql({
             'Content-Type': [ 'text/plain' ],
+         });
+      });
+
+      it('sets the Content-Type header with mime-lookup type when given a type *without* a "/"', () => {
+         expect(sampleResp.getHeaders()).to.eql({});
+
+         const expectations: StringMap = {
+            '.html': 'text/html',
+            html: 'text/html',
+            '.json': 'application/json',
+            json: 'application/json',
+            '.png': 'image/png',
+            png: 'image/png',
+         };
+
+         _.each(expectations, (val, key) => {
+            sampleResp.type(key);
+            expect(sampleResp.getHeaders()).to.eql({
+               'Content-Type': [ val ],
+            });
+            // and a reset just to be sure our next call is unique:
+            sampleResp.type('nothing/never');
+            expect(sampleResp.getHeaders()).to.eql({
+               'Content-Type': [ 'nothing/never' ],
+            });
+         });
+      });
+
+
+      it('falls back to the exact value when given a type *without* a "/" that can\'t be found in the mime DB', () => {
+         expect(sampleResp.getHeaders()).to.eql({});
+
+         sampleResp.type('unknown');
+         expect(sampleResp.getHeaders()).to.eql({
+            'Content-Type': [ 'unknown' ],
          });
       });
 
