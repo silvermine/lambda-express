@@ -280,7 +280,7 @@ describe('Request', () => {
    });
 
    describe('cookie', () => {
-      const test = (name: string, val: string, opts: CookieOpts | undefined, expectedHeader: string): void => {
+      const test = (name: string, val: any, opts: CookieOpts | undefined, expectedHeader: string): void => {
          it(`sets cookie headers correctly - ${expectedHeader}`, () => {
             expect(sampleResp.getHeaders()).to.eql({});
             sampleResp.cookie(name, val, opts);
@@ -294,6 +294,10 @@ describe('Request', () => {
       test('foo', 'bar', { path: '/', httpOnly: true }, 'foo=bar; Path=/; HttpOnly');
       test('foo', 'url encoded', { path: '/', httpOnly: true }, 'foo=url%20encoded; Path=/; HttpOnly');
       test('foo', 'bar baz', { secure: true, domain: 'example.com' }, 'foo=bar%20baz; Domain=example.com; Path=/; Secure');
+      test('foo', { abc: 123 }, undefined, `foo=${encodeURIComponent('j:{"abc":123}')}; Path=/`);
+      test('foo', { abc: 123 }, { path: '/foo', httpOnly: true }, `foo=${encodeURIComponent('j:{"abc":123}')}; Path=/foo; HttpOnly`);
+      test('foo', [ 'a', 'b' ], undefined, `foo=${encodeURIComponent('j:["a","b"]')}; Path=/`);
+      test('foo', [ 'a', 'b' ], { path: '/foo', httpOnly: true }, `foo=${encodeURIComponent('j:["a","b"]')}; Path=/foo; HttpOnly`);
 
       const encoder = (v: string): string => { return v.toUpperCase(); };
 

@@ -80,7 +80,7 @@ export const apiGatewayRequest = (): APIGatewayRequestEvent => {
          'X-Forwarded-Port': '443',
          'X-Forwarded-Proto': 'https',
          Referer: 'https://en.wikipedia.org/wiki/HTTP_referer',
-         Cookie: 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D',
+         Cookie: 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D; obj=j%3A%7B%22abc%22%3A123%7D; onechar=j; bad=j%3A%7Ba%7D',
       },
       multiValueHeaders: {
          Accept: [ '*/*' ],
@@ -100,7 +100,7 @@ export const apiGatewayRequest = (): APIGatewayRequestEvent => {
          'X-Forwarded-Port': [ '443' ],
          'X-Forwarded-Proto': [ 'https' ],
          Referer: [ 'https://en.wikipedia.org/wiki/HTTP_referer' ],
-         Cookie: [ 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D' ],
+         Cookie: [ 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D; obj=j%3A%7B%22abc%22%3A123%7D; onechar=j; bad=j%3A%7Ba%7D' ],
       },
       queryStringParameters: {
          'foo[a]': 'bar b',
@@ -151,7 +151,7 @@ export const albRequest = (): ApplicationLoadBalancerRequestEvent => {
          'x-forwarded-proto': 'http',
          // Using "referer" (one "r") on this request, and "referrer" (two) below
          referer: 'https://en.wikipedia.org/wiki/HTTP_referer',
-         cookie: 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D',
+         cookie: 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D; obj=j%3A%7B%22abc%22%3A123%7D; onechar=j; bad=j%3A%7Ba%7D',
       },
    });
 };
@@ -174,7 +174,7 @@ export const albMultiValHeadersRequest = (): ApplicationLoadBalancerRequestEvent
          'x-forwarded-proto': [ 'http' ],
          // Using "referrer" (two "r"s) on this request, and "referer" (one) above
          referrer: [ 'https://en.wikipedia.org/wiki/HTTP_referer' ],
-         cookie: [ 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D' ],
+         cookie: [ 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D; obj=j%3A%7B%22abc%22%3A123%7D; onechar=j; bad=j%3A%7Ba%7D' ],
       },
    });
 };

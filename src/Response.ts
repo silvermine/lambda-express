@@ -219,13 +219,21 @@ export default class Response {
     * Sets cookie `name` to `value`, optionally with the specified cookie options. See
     * `CookieOpts`.
     *
+    * Generally cookie values are strings, but you can also supply a JS object, which will
+    * be stringified with `JSON.stringify(userVal)` and prefixed with `j:`. This matches
+    * what Express does with response cookies and what their cookie parser middleware does
+    * with incoming (request) cookie headers.
+    *
+    * @see https://github.com/expressjs/cookie-parser/blob/1dc306b0ebe86ab98521811cc090740b4bef48e7/index.js#L84-L86
+    * @see https://github.com/expressjs/express/blob/dc538f6e810bd462c98ee7e6aae24c64d4b1da93/lib/response.js#L836-L838
+    *
     * TODO: how does a user see the documentation for `CookieOpts`?
     *
     * @param name the name of the cookie
     * @param userVal the value of the cookie
     * @param userOpts the options (such as domain, path, etc)
     */
-   public cookie(name: string, userVal: string, userOpts?: CookieOpts): Response {
+   public cookie(name: string, userVal: unknown, userOpts?: CookieOpts): Response {
       const opts = _.extend({ path: '/' }, userOpts) as CookieOpts,
             value = (_.isObject(userVal) ? `j:${JSON.stringify(userVal)}` : String(userVal));
 
