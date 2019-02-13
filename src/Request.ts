@@ -24,9 +24,9 @@ export default class Request {
     * For example:
     *
     * ```
-    * var greet = express.Router();
+    * var greet = new express.Router();
     *
-    * app.use('/greet', greet); // load the router on '/greet'
+    * app.addSubRouter('/greet', greet); // load the router on '/greet'
     * greet.get('/jp', function (req, res) {
     *    console.log(req.baseUrl); // '/greet'
     *    res.send('Konichiwa!');
@@ -39,7 +39,7 @@ export default class Request {
     *
     * ```
     * // load the router on '/gre+t' and '/hel{2}o':
-    * app.use(['/gre+t', '/hel{2}o'], greet);
+    * app.addSubRouter(['/gre+t', '/hel{2}o'], greet);
     * ```
     * When a request is made to `/greet/jp`, `req.baseUrl` is `/greet`. When a request is
     * made to `/hello/jp`, `req.baseUrl` is `/hello`.
@@ -89,6 +89,9 @@ export default class Request {
     * the "mounting" feature of `app.use()` will rewrite `req.url` to strip the mount
     * point.
     *
+    * TODO: We still don't support internal re-routing mid-request. We need to investigate
+    * how, exactly, Express does this, and what it would take to support it.
+    *
     * ```
     * // GET /search?q=something
     * req.originalUrl
@@ -134,7 +137,7 @@ export default class Request {
     * NOTE: Lambda Express automatically decodes the values in `req.params` (using
     * `decodeURIComponent`).
     */
-   public readonly params: StringMap;
+   public readonly params: Readonly<StringMap>;
 
    /**
     * Contains the path part of the request URL.
@@ -148,6 +151,11 @@ export default class Request {
     * `req.originalUrl` for more details.
     */
    public readonly path: string;
+
+   /**
+    * Synonymous with `req.path`.
+    */
+   public readonly url: string;
 
    /**
     * Contains the request protocol string: either `http` or (for TLS requests) `https`
@@ -229,9 +237,11 @@ export default class Request {
    public body?: any;
 
    private readonly _headers: StringArrayOfStringsMap;
+   private readonly _event: RequestEvent;
 
-   public constructor(app: Application, event: RequestEvent, context: HandlerContext) {
+   public constructor(app: Application, event: RequestEvent, context: HandlerContext, baseURL: string = '', params: StringMap = {}) {
       this.app = app;
+      this._event = event;
       this._headers = this._parseHeaders(event);
       this.method = (event.httpMethod || '').toUpperCase();
       this.body = this._parseBody(event.body);
@@ -253,10 +263,20 @@ export default class Request {
       this.xhr = (this.get('x-requested-with') === 'XMLHttpRequest');
 
       // Fields related to routing:
-      this.path = 'foo';
-      this.baseUrl = 'foo';
-      this.originalUrl = 'foo';
-      this.params = {};
+      this.baseUrl = baseURL;
+      this.path = this.url = event.path;
+      this.originalUrl = baseURL + event.path;
+      this.params = Object.freeze(params);
+   }
+
+   /** CLONING FUNCTION */
+
+   public makeSubRequest(baseURL: string, params?: StringMap): Request {
+      const restOfPath = this._event.path.substring(baseURL.length),
+            // TODO: this isn't a deep clone - does it need to be?
+            event = _.extend({}, this._event, { path: restOfPath });
+
+      return new Request(this.app, event, this.context, baseURL, params);
    }
 
    /** CONVENIENCE FUNCTIONS */
