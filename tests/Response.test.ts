@@ -307,16 +307,15 @@ describe('Request', () => {
 
       describe('with maxAge', () => {
          let now = new Date(Date.UTC(1991, 10, 23, 12, 30, 59, 900)),
-             sandbox: SinonSandbox, clock: SinonFakeTimers;
+             sandbox: SinonSandbox;
 
          beforeEach(() => {
-            sandbox = sinon.sandbox.create();
-            clock = sinon.useFakeTimers(now.getTime());
+            sandbox = sinon.createSandbox();
+            sandbox.useFakeTimers(now.getTime());
          });
 
          afterEach(() => {
             sandbox.restore();
-            clock.restore();
          });
 
          test('foo', 'bar', { maxAge: 5000 }, 'foo=bar; Max-Age=5; Path=/; Expires=Sat, 23 Nov 1991 12:31:04 GMT');
@@ -363,7 +362,7 @@ describe('Request', () => {
              sandbox: SinonSandbox, clock: SinonFakeTimers;
 
          beforeEach(() => {
-            sandbox = sinon.sandbox.create();
+            sandbox = sinon.createSandbox();
             clock = sinon.useFakeTimers(now.getTime());
          });
 
