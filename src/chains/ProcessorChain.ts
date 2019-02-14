@@ -3,7 +3,7 @@ import { ErrorHandlingRequestProcessor, NextCallback } from '../interfaces';
 import { Request, Response } from '..';
 
 export interface IProcessorChain {
-   run(err: any, req: Request, resp: Response, done: NextCallback): void;
+   run(err: unknown, req: Request, resp: Response, done: NextCallback): void;
 }
 
 export interface IRequestMatchingProcessorChain extends IProcessorChain {
@@ -18,7 +18,7 @@ export default class ProcessorChain implements IProcessorChain {
       this._subprocessors = subprocessors;
    }
 
-   public run(originalErr: any, req: Request, resp: Response, done: NextCallback): void {
+   public run(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
       const subRequest = this._makeSubRequest(req);
 
       const run = _.reduce(this._subprocessors.slice().reverse(), (next: NextCallback, rp: ErrorHandlingRequestProcessor): NextCallback => {

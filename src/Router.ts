@@ -34,7 +34,7 @@ export default class Router implements IRouter {
    // If we do add it, we need to set the case-sensitivity of the sub-router it creates
    // using the case-sensitivity setting of this router.
 
-   public handle(originalErr: any, req: Request, resp: Response, done: NextCallback): void {
+   public handle(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
       const processors = _.filter(this._processors, (p) => { return p.matches(req); });
 
       const go = _.reduce(processors.reverse(), (next: NextCallback, p: IProcessorChain): NextCallback => {

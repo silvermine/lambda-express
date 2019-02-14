@@ -1,11 +1,12 @@
 import { Callback } from 'aws-lambda';
 import Router from './Router';
 import { RequestEvent, HandlerContext } from './request-response-types';
+import { StringUnknownMap } from './utils/common-types';
 import { Request, Response } from '.';
 
 export default class Application extends Router {
 
-   private _settings: { [k: string]: any } = {};
+   private _settings: StringUnknownMap = {};
 
    /**
     * Assigns setting `name` to `value`. You may store any value that you want, but
@@ -37,7 +38,7 @@ export default class Application extends Router {
     * @param name The name of the setting
     * @param val The value to assign to the setting
     */
-   public setSetting(name: string, val: any): Application {
+   public setSetting(name: string, val: unknown): Application {
       this._settings[name] = val;
 
       if (name === 'case sensitive routing') {
@@ -49,7 +50,7 @@ export default class Application extends Router {
    /**
     * See `app.setSetting(name, val)`.
     */
-   public getSetting(name: string): any {
+   public getSetting(name: string): unknown {
       return this._settings[name];
    }
 
@@ -88,7 +89,7 @@ export default class Application extends Router {
       const req = new Request(this, evt, context),
             resp = new Response(this, req, cb);
 
-      this.handle(undefined, req, resp, (err: any): void => {
+      this.handle(undefined, req, resp, (err: unknown): void => {
          // handler of last resort:
          if (err) {
             resp.sendStatus(500);

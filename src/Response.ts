@@ -390,7 +390,7 @@ export default class Response {
     *
     * @param o the object to send in the response
     */
-   public json(o: any): Response {
+   public json(o: unknown): Response {
       this._body = JSON.stringify(o);
       return this.type('application/json; charset=utf-8').end();
    }
@@ -411,9 +411,9 @@ export default class Response {
     *
     * @param o the object to send in the response
     */
-   public jsonp(o: any): Response {
+   public jsonp(o: unknown): Response {
       const queryParamName = this.app.getSetting('jsonp callback name') || 'callback',
-            callbackFunctionName = this._request.query[queryParamName];
+            callbackFunctionName = this._request.query[queryParamName as string];
 
       if (_.isString(callbackFunctionName)) {
          this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${JSON.stringify(o)});`;
