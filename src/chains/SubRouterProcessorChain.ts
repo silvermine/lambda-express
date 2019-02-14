@@ -15,7 +15,7 @@ export class SubRouterProcessorChain implements IRequestMatchingProcessorChain {
       this._router = router;
    }
 
-   public run(err: any, req: Request, resp: Response, done: NextCallback): void {
+   public run(err: unknown, req: Request, resp: Response, done: NextCallback): void {
       const result = this._matcher.exec(req.path);
 
       if (!result || result.length === 0) {

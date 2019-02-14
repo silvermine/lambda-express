@@ -16,7 +16,7 @@ class TestRouter extends Router {
       this._handler = handler;
    }
 
-   public handle(originalErr: any, req: Request, resp: Response, done: NextCallback): void {
+   public handle(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
       this._handler(originalErr, req, resp, done);
    }
 

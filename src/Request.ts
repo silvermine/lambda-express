@@ -237,7 +237,7 @@ export default class Request {
     * Middleware can be plugged in to support body parsing, e.g. JSON and multi-part form
     * bodies.
     */
-   public body?: any;
+   public body?: unknown;
 
    private readonly _headers: StringArrayOfStringsMap;
    private readonly _event: RequestEvent;
@@ -331,7 +331,7 @@ export default class Request {
 
    /** EVENT PARSING FUNCTIONS */
 
-   private _parseBody(body: string | null): any {
+   private _parseBody(body: string | null): unknown {
       if (!body || _.isEmpty(body)) {
          return null;
       }

@@ -33,7 +33,7 @@ export default function makeRequestProcessor(name: string, userOpts?: MakeFuncti
        rp: AnyRequestProcessor;
 
    if (opts.handlesErrors) {
-      rp = (err: any, _req: Request, _resp: Response, next: NextCallback): void => {
+      rp = (err: unknown, _req: Request, _resp: Response, next: NextCallback): void => {
          if (opts.throwsError) {
             throw new Error(`Error from "${name}"`);
          } else if (opts.callsNextWithError) {

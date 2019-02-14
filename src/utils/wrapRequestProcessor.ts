@@ -8,7 +8,7 @@ function isErrorHandler(rh: AnyRequestProcessor): rh is ErrorHandlingRequestProc
 
 export function wrapRequestProcessor(rp: AnyRequestProcessor): ErrorHandlingRequestProcessor {
    if (isErrorHandler(rp)) {
-      return (err: any, req: Request, resp: Response, next: NextCallback) => {
+      return (err: unknown, req: Request, resp: Response, next: NextCallback) => {
          if (err) {
             return rp(err, req, resp, next);
          }
@@ -19,7 +19,7 @@ export function wrapRequestProcessor(rp: AnyRequestProcessor): ErrorHandlingRequ
       };
    }
 
-   return (err: any, req: Request, resp: Response, next: NextCallback) => {
+   return (err: unknown, req: Request, resp: Response, next: NextCallback) => {
       if (err) {
          // If there's an error, regular request processors don't handle it, so we
          // simply call next so that we keep chaining down to the first real error

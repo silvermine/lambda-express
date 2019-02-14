@@ -13,7 +13,7 @@ import Response from './Response';
  * be handed over to the first error-handling request processor in the chain.
  */
 export interface NextCallback {
-   (err?: any): void;
+   (err?: unknown): void;
 }
 
 /**
@@ -67,7 +67,7 @@ export interface ErrorHandlingRequestProcessor {
     * @param next Callback that should be called when the handler is done with its work
     *             processing the request (see notes above)
     */
-   (err: any, req: Request, resp: Response, next: NextCallback): unknown;
+   (err: unknown, req: Request, resp: Response, next: NextCallback): unknown;
 }
 
 export type AnyRequestProcessor = RequestProcessor | ErrorHandlingRequestProcessor;
@@ -166,6 +166,6 @@ export interface IRouter {
     * not the first request processor to have handled the request, and a previous one
     * already generated an error).
     */
-   handle(err: any, req: Request, resp: Response, done: NextCallback): void;
+   handle(err: unknown, req: Request, resp: Response, done: NextCallback): void;
 
 }
