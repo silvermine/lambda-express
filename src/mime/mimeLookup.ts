@@ -1,7 +1,8 @@
 import _ from 'underscore';
+import MimeTypes from './standard.json';
 import { StringMap } from '../utils/common-types';
 
-const db = _.reduce(require('./standard.json'), (memo, extensions: string[], type: string): StringMap => {
+const db = _.reduce(MimeTypes, (memo, extensions: string[], type: string): StringMap => {
    _.each(extensions, (ext) => {
       memo[ext] = type;
    });
