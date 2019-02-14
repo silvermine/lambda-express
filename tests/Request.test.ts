@@ -140,6 +140,9 @@ describe('Request', () => {
          _.each(allRequestTypes, (req) => {
             expect(req.cookies.uid).to.eql('abc');
             expect(req.cookies.baz).to.eql('foo[a]');
+            expect(req.cookies.obj).to.eql({ abc: 123 });
+            expect(req.cookies.onechar).to.eql('j');
+            expect(req.cookies.bad).to.eql('j:{a}');
          });
       });
 

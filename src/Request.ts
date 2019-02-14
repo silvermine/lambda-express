@@ -3,7 +3,7 @@ import qs from 'qs';
 import cookie from 'cookie';
 import Application from './Application';
 import { RequestEvent, HandlerContext, RequestEventRequestContext } from './request-response-types';
-import { StringMap, KeyValueStringObject, StringArrayOfStringsMap } from './utils/common-types';
+import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from './utils/common-types';
 
 export default class Request {
 
@@ -49,8 +49,11 @@ export default class Request {
    /**
     * Contains cookies sent by the request (key/value pairs). If the request contains no
     * cookies, it defaults to `{}`.
+    *
+    * Cookie values are generally strings, but can also be JSON objects. See
+    * `Response.cookie` for more details.
     */
-   public readonly cookies: StringMap;
+   public readonly cookies: StringUnknownMap;
 
    /**
     * Contains the hostname derived from the `Host` HTTP header.
@@ -371,14 +374,27 @@ export default class Request {
       }, {});
    }
 
-   private _parseCookies(): StringMap {
+   private _parseCookies(): StringUnknownMap {
       const cookieHeader = this.get('cookie') || '';
 
       if (_.isEmpty(cookieHeader)) {
          return {};
       }
 
-      return cookie.parse(cookieHeader);
+      const cookies = cookie.parse(cookieHeader);
+
+      // If any cookies were "JSON cookies", parse them. See `Response.cookie`.
+      _.each(cookies, (v, k): void => {
+         if (_.isString(v) && v.substring(0, 2) === 'j:') {
+            try {
+               cookies[k] = JSON.parse(v.substring(2));
+            } catch(e) {
+               // no-op - value of the cookie remains the raw string
+            }
+         }
+      });
+
+      return cookies;
    }
 
    private _parseHostname(): string | undefined {

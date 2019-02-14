@@ -1,6 +1,7 @@
 import _ from 'underscore';
 
 export interface StringMap { [s: string]: string }
+export interface StringUnknownMap { [s: string]: unknown }
 export interface StringArrayOfStringsMap { [s: string]: string[] }
 export interface KeyValueStringObject { [k: string]: (string | string[] | KeyValueStringObject) }
 
@@ -14,6 +15,19 @@ export function isStringMap(o: any): o is StringMap {
 
    return _.reduce(o, (memo, v, k) => {
       return memo && _.isString(k) && _.isString(v);
+   }, true);
+}
+
+export function isStringUnknownMap(o: any): o is StringUnknownMap {
+   if (!_.isObject(o) || _.isArray(o)) { // because arrays are objects
+      return false;
+   }
+   if (_.isEmpty(o)) {
+      return true;
+   }
+
+   return _.reduce(o, (memo, _v, k) => {
+      return memo && _.isString(k);
    }, true);
 }
 
