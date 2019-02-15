@@ -25,9 +25,6 @@ export class RouteMatchingProcessorChain extends ProcessorChain implements IRequ
       return this._matcher.test(req.path);
    }
 
-   /**
-    * Only public for the sake of unit testing.
-    */
    protected _makeParams(path: string): StringMap {
       const params: StringMap = {},
             matches = this._matcher.exec(path);
@@ -46,9 +43,6 @@ export class RouteMatchingProcessorChain extends ProcessorChain implements IRequ
       return params;
    }
 
-   /**
-    * Only public for the sake of unit testing.
-    */
    protected _makeSubRequest(req: Request): Request {
       const params = this._makeParams(req.path);
 

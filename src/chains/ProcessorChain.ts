@@ -39,7 +39,7 @@ export default class ProcessorChain implements IProcessorChain {
 
    /**
     * Extension point for subclasses to override aspects of the request like baseUrl and
-    * params. Only public for the sake of unit testing.
+    * params.
     */
    protected _makeSubRequest(req: Request): Request {
       return req;
