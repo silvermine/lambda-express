@@ -34,7 +34,7 @@ describe('Request', () => {
 
    describe('header functionality', () => {
 
-      it('sets and appends headers correctly', () => {
+      it('sets, appends, and deletes headers correctly', () => {
          expect(sampleResp.getHeaders()).to.eql({});
          sampleResp.set('Content-Type', 'text/plain');
          expect(sampleResp.getHeaders()).to.eql({
@@ -100,6 +100,22 @@ describe('Request', () => {
             'Waa': [ 'Hoo' ],
          });
 
+         // delete
+         sampleResp.delete('Content-Type');
+         expect(sampleResp.getHeaders()).to.eql({
+            'ETag': [ '54321' ],
+            'Foo': [ 'Bar', 'Baz' ],
+            'Baz': [ 'Boom' ],
+            'Waa': [ 'Hoo' ],
+         });
+
+         sampleResp.delete('ETag');
+         expect(sampleResp.getHeaders()).to.eql({
+            'Foo': [ 'Bar', 'Baz' ],
+            'Baz': [ 'Boom' ],
+            'Waa': [ 'Hoo' ],
+         });
+
       });
 
       it('throws errors when set/append are called after a response is sent', () => {
@@ -152,6 +168,128 @@ describe('Request', () => {
             });
          });
 
+      });
+
+      describe('caching helpers', () => {
+         let now = new Date(Date.UTC(1991, 10, 23, 12, 30, 59, 900)), // Sat, 23 Nov 1991 12:30:59 GMT
+             sandbox: SinonSandbox;
+
+         beforeEach(() => {
+            sandbox = sinon.createSandbox();
+            sandbox.useFakeTimers(now.getTime());
+         });
+
+         afterEach(() => {
+            sandbox.restore();
+         });
+
+         describe('cacheForSeconds', () => {
+
+            it('sets the cache headers correctly', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+               sampleResp.cacheForSeconds(180);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 12:33:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=180' ],
+               });
+            });
+
+            it('allows toggling them back and forth', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+
+               sampleResp.cacheForSeconds(180);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 12:33:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=180' ],
+               });
+
+               sampleResp.cacheForSeconds(0);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Thu, 19 Nov 1981 08:52:00 GMT' ],
+                  'Cache-Control': [ 'no-cache, max-age=0, must-revalidate' ],
+                  'Pragma': [ 'no-cache' ],
+               });
+
+               sampleResp.cacheForSeconds(241);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 12:35:00 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=241' ],
+               });
+            });
+
+         });
+
+         describe('cacheForMinutes', () => {
+
+            it('sets the cache headers correctly', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+               sampleResp.cacheForMinutes(90);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 14:00:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=5400' ],
+               });
+            });
+
+            it('allows toggling them back and forth', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+
+               sampleResp.cacheForMinutes(90);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 14:00:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=5400' ],
+               });
+
+               sampleResp.cacheForMinutes(0);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Thu, 19 Nov 1981 08:52:00 GMT' ],
+                  'Cache-Control': [ 'no-cache, max-age=0, must-revalidate' ],
+                  'Pragma': [ 'no-cache' ],
+               });
+
+               sampleResp.cacheForMinutes(5);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 12:35:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=300' ],
+               });
+            });
+
+         });
+
+         describe('cacheForHours', () => {
+
+            it('sets the cache headers correctly', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+               sampleResp.cacheForHours(2);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 14:30:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=7200' ],
+               });
+            });
+
+            it('allows toggling them back and forth', () => {
+               expect(sampleResp.getHeaders()).to.eql({});
+
+               sampleResp.cacheForHours(2);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 14:30:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=7200' ],
+               });
+
+               sampleResp.cacheForHours(0);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Thu, 19 Nov 1981 08:52:00 GMT' ],
+                  'Cache-Control': [ 'no-cache, max-age=0, must-revalidate' ],
+                  'Pragma': [ 'no-cache' ],
+               });
+
+               sampleResp.cacheForHours(1);
+               expect(sampleResp.getHeaders()).to.eql({
+                  'Expires': [ 'Sat, 23 Nov 1991 13:30:59 GMT' ],
+                  'Cache-Control': [ 'must-revalidate, max-age=3600' ],
+               });
+            });
+
+         });
       });
 
    });
