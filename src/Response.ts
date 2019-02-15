@@ -59,6 +59,14 @@ export default class Response {
    }
 
    /**
+    * Deletes a response header that may have been previously set.
+    */
+   public delete(headerName: string): Response {
+      delete this._headers[headerName];
+      return this;
+   }
+
+   /**
     * Appends one or more response header values to the response. For example:
     *
     * ```
@@ -259,6 +267,49 @@ export default class Response {
     */
    public clearCookie(name: string, userOpts?: CookieOpts): Response {
       return this.cookie(name, '', _.extend({ expires: new Date(1), path: '/' }, userOpts));
+   }
+
+   /**
+    * Sets the appropriate caching headers (`Expires`, `Cache-Control`, and `Pragma`) to
+    * cache content for a specific number of seconds. If zero or any negative number of
+    * seconds is passed in, the headers are set to disallow caching.
+    */
+   public cacheForSeconds(seconds: number): Response {
+      const now = new Date(),
+            expiry = new Date(now.getTime() + (seconds * 1000));
+
+      if (seconds > 0) {
+         this.delete('Pragma');
+         this.set({
+            'Expires': expiry.toUTCString(),
+            'Cache-Control': `must-revalidate, max-age=${seconds}`,
+         });
+      } else {
+         this.set({
+            'Expires': 'Thu, 19 Nov 1981 08:52:00 GMT',
+            'Cache-Control': 'no-cache, max-age=0, must-revalidate',
+            'Pragma': 'no-cache',
+         });
+      }
+      return this;
+   }
+
+   /**
+    * Convenience wrapper for `resp.cacheForSeconds`. Same semantics, but allows for
+    * easier-to-read code by allowing the developer to express the number of minutes
+    * without having to do multiplication (or division when you read the code.)
+    */
+   public cacheForMinutes(minutes: number): Response {
+      return this.cacheForSeconds(minutes * 60);
+   }
+
+   /**
+    * Convenience wrapper for `resp.cacheForSeconds`. Same semantics, but allows for
+    * easier-to-read code by allowing the developer to express the number of hours without
+    * having to do multiplication (or division when you read the code.)
+    */
+   public cacheForHours(hours: number): Response {
+      return this.cacheForMinutes(hours * 60);
    }
 
    // METHODS RELATED TO SENDING RESPONSES
