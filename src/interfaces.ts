@@ -1,3 +1,5 @@
+/* istanbul ignore next */
+
 import Request from './Request';
 import Response from './Response';
 

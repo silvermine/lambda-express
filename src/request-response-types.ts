@@ -1,3 +1,5 @@
+/* istanbul ignore next */
+
 import {
    APIGatewayEventRequestContext as OrigAPIGatewayEventRequestContext,
    APIGatewayProxyEvent,
