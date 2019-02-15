@@ -374,13 +374,7 @@ describe('integration tests', () => {
 
          app.addSubRouter('/cars', r1);
 
-         // TODO: we need to note / think about this difference from Express 4.x: Because
-         // we're using the latest path-to-regexp, it has a difference when it comes to
-         // `/*` - Express 4.x allows for regular expression characters anywhere in the
-         // path, but the latest path-to-regexp says that's considered a bug and it now
-         // only allows them in parameters. That said, Express adds a fast_star parameter
-         // for things that end in star, and maybe that's what we need to do here.
-         app.get('/(.*)', (_req: Request, resp: Response): void => {
+         app.get('/*', (_req: Request, resp: Response): void => {
             resp.send('everything else');
          });
 
