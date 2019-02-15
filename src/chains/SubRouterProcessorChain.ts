@@ -1,17 +1,16 @@
 import { IRequestMatchingProcessorChain } from './ProcessorChain';
 import { PathParams, IRouter, NextCallback } from '../interfaces';
 import { Request, Response } from '..';
-import pathToRegexp from 'path-to-regexp';
+const pathToRegexp = require('path-to-regexp');
 
 export class SubRouterProcessorChain implements IRequestMatchingProcessorChain {
 
    private readonly _matcher: RegExp;
-   private readonly _paramKeys: pathToRegexp.Key[] = [];
    private readonly _router: IRouter;
 
    public constructor(path: PathParams, router: IRouter) {
       // TODO: case sensitivity settings (strict and end need to remain false here):
-      this._matcher = pathToRegexp(path, this._paramKeys, { sensitive: false, strict: false, end: false });
+      this._matcher = pathToRegexp(path, [], { sensitive: false, strict: false, end: false });
       this._router = router;
    }
 

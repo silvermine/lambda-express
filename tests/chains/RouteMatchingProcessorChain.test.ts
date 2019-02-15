@@ -77,10 +77,10 @@ describe('RouteMatchingProcessorChain', () => {
          test('/users/:id', '/users/1234', { id: '1234' });
          test('/users/:id?', '/users', {});
          test('/users/:id?', '/users/1234', { id: '1234' });
-         test('/users/:path+', '/users', {});
-         test('/users/:path+', '/users/', {});
-         test('/users/:path+', '/users/usa/tx/austin', { path: 'usa/tx/austin' });
-         test('/users/:path+', '/users/usa/tx/austin/', { path: 'usa/tx/austin' });
+         test('/users/*', '/users', {});
+         test('/users/*', '/users/', {});
+         test('/users/*', '/users/usa/tx/austin', { '0': 'usa/tx/austin' });
+         test('/users/*', '/users/usa/tx/austin/', { '0': 'usa/tx/austin/' });
          test('/cars/:car/drivers/:driver/licenses/:license', '/cars/ford/drivers/jeremy/licenses/CM', {
             car: 'ford',
             driver: 'jeremy',

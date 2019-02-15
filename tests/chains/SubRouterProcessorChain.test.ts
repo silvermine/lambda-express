@@ -77,9 +77,9 @@ describe('SubRouterProcessorChain', () => {
 
       it('runs with a proper sub-request', () => {
          test('/users', '/users', '/users');
-         test('/user(s*)', '/user', '/user');
-         test('/user(s*)/admins', '/user/admins', '/user/admins');
-         test('/user(s*)/admins', '/users/admins', '/users/admins');
+         test('/user(s?*)', '/user', '/user');
+         test('/user(s?*)/admins', '/user/admins', '/user/admins');
+         test('/user(s?*)/admins', '/users/admins', '/users/admins');
          test([ '/users', '/personnel' ], '/users', '/users');
          test([ '/users', '/personnel' ], '/personnel', '/personnel');
          test([ '/users', /\/person+el/ ], '/personnel', '/personnel');

@@ -2,14 +2,18 @@ import _ from 'underscore';
 import ProcessorChain, { IRequestMatchingProcessorChain } from './ProcessorChain';
 import { ErrorHandlingRequestProcessor, PathParams } from '../interfaces';
 import { Request } from '..';
-import pathToRegexp from 'path-to-regexp';
 import { StringMap } from '../utils/common-types';
+const pathToRegexp = require('path-to-regexp');
+
+interface PathToRegexpKey {
+   [name: string]: string;
+}
 
 export class RouteMatchingProcessorChain extends ProcessorChain implements IRequestMatchingProcessorChain {
 
    private readonly _method: string | undefined;
    private readonly _matcher: RegExp;
-   private readonly _paramKeys: pathToRegexp.Key[] = [];
+   private readonly _paramKeys: PathToRegexpKey[] = [];
 
    public constructor(subprocessors: ErrorHandlingRequestProcessor[], path: PathParams, caseSensitive: boolean = false, method?: string) {
       super(subprocessors);
