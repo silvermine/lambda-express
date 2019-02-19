@@ -380,22 +380,32 @@ describe('integration tests', () => {
 
          testOutcome('GET', '/hello/world', 'hello world!');
          testOutcome('GET', '/foo', 'everything else');
+
+         testOutcome('GET', '/cars', 'list cars');
          testOutcome('GET', '/cars/', 'list cars');
+         testOutcome('POST', '/cars', 'create a car');
          testOutcome('POST', '/cars/', 'create a car');
-         // TODO: should '/cars' also result in 'list cars'? It does not currently
+
          testOutcome('GET', '/cars/F-350', 'get car F-350');
+         testOutcome('GET', '/cars/F-350/', 'get car F-350');
          // This also adds a test for URL decoding parameters:
          testOutcome('GET', '/cars/awesome%20F-350', 'get car awesome F-350');
+         testOutcome('GET', '/cars/awesome%20F-350/', 'get car awesome F-350');
          testOutcome('PUT', '/cars/F-350', 'update car F-350');
+         testOutcome('PUT', '/cars/F-350/', 'update car F-350');
 
-         // testOutcome('GET', '/cars/manufacturers/', 'list manufacturers');
+         testOutcome('GET', '/cars/manufacturers', 'list manufacturers');
+         testOutcome('GET', '/cars/manufacturers/', 'list manufacturers');
+         testOutcome('POST', '/cars/manufacturers', 'create a manufacturer');
          testOutcome('POST', '/cars/manufacturers/', 'create a manufacturer');
-         // TODO: should '/cars/manufacturers' also result in 'list manufacturers'? It
-         // does not currently
+
          testOutcome('GET', '/cars/manufacturers/ford', 'get manufacturer ford');
+         testOutcome('GET', '/cars/manufacturers/ford/', 'get manufacturer ford');
          // This also adds a test for URL decoding parameters:
          testOutcome('GET', '/cars/manufacturers/awesome%20ford', 'get manufacturer awesome ford');
+         testOutcome('GET', '/cars/manufacturers/awesome%20ford/', 'get manufacturer awesome ford');
          testOutcome('PUT', '/cars/manufacturers/ford', 'update manufacturer ford');
+         testOutcome('PUT', '/cars/manufacturers/ford/', 'update manufacturer ford');
       });
    });
 
