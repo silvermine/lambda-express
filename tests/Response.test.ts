@@ -6,6 +6,7 @@ import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersReques
 import sinon, { spy, assert, SinonSpy, SinonSandbox, SinonFakeTimers } from 'sinon';
 import { StringArrayOfStringsMap, StringMap } from '../src/utils/common-types';
 import { RequestEvent, CookieOpts } from '../src/request-response-types';
+import ConsoleLogger from '../src/logging/ConsoleLogger';
 
 // function type used for reusable test extension below
 type Extender = (resp: Response, output: any) => void;
@@ -144,6 +145,28 @@ describe('Response', () => {
          } catch(e) {
             expect(e.message).to.eql('Can\'t set headers after they are sent.');
          }
+      });
+
+      it('logs an error when passed two args and the second is not a string', () => {
+         // This is for JS-only functionality. TypeScript users will be safeguarded from
+         // doing this by type safety.
+         const val: any = true,
+               req = new Request(app, apiGatewayRequest(), handlerContext()),
+               logger = new ConsoleLogger({ interface: 'ALB', getTimeUntilFnTimeout: () => { return 0; } }),
+               errorFnSpy = sinon.spy();
+
+         // Mock the logger's `error` function
+         (logger as any).error = errorFnSpy;
+         (req as any).log = logger;
+
+         const resp = new Response(app, req, EMPTY_CB);
+
+         // Try setting a header with a boolean value
+         resp.set('Foo', val);
+
+         // Expect that an error was logged
+         sinon.assert.calledOnce(errorFnSpy);
+         sinon.assert.calledWithExactly(errorFnSpy, 'Header value for "Foo" must be a string.');
       });
 
       describe('append', () => {
