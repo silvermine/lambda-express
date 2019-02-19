@@ -138,6 +138,15 @@ describe('Request', () => {
          }
       });
 
+      it('throws an error when passed two args and the second is not a string', () => {
+         // This is for JS-only functionality. TypeScript users will be safeguarded from
+         // doing this by type safety.
+         const val: any = true;
+
+         expect(() => { sampleResp.set('Foo', val); }).to
+            .throw('Header value for "Foo" must be a string.');
+      });
+
       describe('append', () => {
 
          it('handles when a header has not yet been set', () => {

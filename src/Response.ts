@@ -54,6 +54,15 @@ export default class Response {
          this._headers[arg0] = [ arg1 ];
       } else if (isStringMap(arg0)) {
          _.each(arg0, (v, k) => { this.set(k, v); });
+      } else {
+         // This is here to help JS users who may not benefit from the type safety. If
+         // they were to do something like `resp.set('X-Foo', true)`, it would silently
+         // fail. Loudly failing seems better because at least they know - and we didn't
+         // have to guess at what their intent was.
+
+         // TODO: When we add logging to the library, it would probably be better to
+         // accomplish this by means of logging an error instead of throwing an error.
+         throw new Error(`Header value for "${arg0}" must be a string.`);
       }
       return this;
    }
