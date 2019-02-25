@@ -12,6 +12,7 @@ script:
    - node --version
    - npm --version
    - grunt standards
+   - commitlint-travis
    - grunt clean build
    - npm test
 

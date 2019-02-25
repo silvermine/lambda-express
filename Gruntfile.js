@@ -8,7 +8,7 @@ module.exports = (grunt) => {
       js: {
          gruntFile: 'Gruntfile.js',
          all: [
-            'Gruntfile.js',
+            './*.js',
             './src/**/*.js',
             './tests/**/*.js',
          ],
