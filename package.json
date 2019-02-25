@@ -47,6 +47,7 @@
       "nyc": "13.1.0",
       "sinon": "5.1.1",
       "source-map-support": "0.5.9",
+      "standard-version": "git+https://github.com/jthomerson/standard-version.git#fix-305-header-repeat",
       "ts-node": "7.0.1",
       "typescript": "3.2.2"
    },
