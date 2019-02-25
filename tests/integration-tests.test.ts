@@ -5,7 +5,7 @@ import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
 import { NextCallback } from '../src/interfaces';
 import { expect } from 'chai';
-import { StringArrayOfStringsMap, StringMap } from '../src/utils/common-types';
+import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '../src/utils/common-types';
 
 describe('integration tests', () => {
    let testBody = { a: 'xyz' },
@@ -332,22 +332,22 @@ describe('integration tests', () => {
 
    });
 
+   const testOutcome = (method: string, path: string, expectedBody: string): void => {
+      const cb = spy(),
+            evt = makeRequestEvent(path, apiGatewayRequest(), method);
+
+      app.run(evt, handlerContext(), cb);
+
+      assert.calledOnce(cb);
+      assert.calledWithExactly(cb, undefined, {
+         statusCode: 200,
+         body: expectedBody,
+         isBase64Encoded: false,
+         multiValueHeaders: { 'Content-Type': [ 'text/html' ] },
+      });
+   };
 
    describe('sub-routing', () => {
-      const testOutcome = (method: string, path: string, expectedBody: string): void => {
-         const cb = spy(),
-               evt = makeRequestEvent(path, apiGatewayRequest(), method);
-
-         app.run(evt, handlerContext(), cb);
-
-         assert.calledOnce(cb);
-         assert.calledWithExactly(cb, undefined, {
-            statusCode: 200,
-            body: expectedBody,
-            isBase64Encoded: false,
-            multiValueHeaders: { 'Content-Type': [ 'text/html' ] },
-         });
-      };
 
       it('works when we have added a subrouter and subsubrouter to the main app', () => {
          const r1 = new Router(),
@@ -407,6 +407,144 @@ describe('integration tests', () => {
          testOutcome('PUT', '/cars/manufacturers/ford', 'update manufacturer ford');
          testOutcome('PUT', '/cars/manufacturers/ford/', 'update manufacturer ford');
       });
+   });
+
+   describe('internal re-routing with `request.url`', () => {
+
+      // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+      function testRoutesWithRedirect(changeReqFn = (req: Request) => { req.url = '/goodbye'; }, expectedResponse: string = 'goodbye') {
+         const router = new Router();
+
+         let reqProps = [ 'url', 'path', 'query' ],
+             helloRouteHandler: SinonSpy,
+             helloRouteHandler2: SinonSpy,
+             goodbyeRouteHandler: SinonSpy,
+             helloReq: { url: string; path: string; query: KeyValueStringObject },
+             hello2Req: { url: string; path: string; query: KeyValueStringObject },
+             goodbyeReq: { url: string; path: string; query: KeyValueStringObject };
+
+         helloRouteHandler = spy((req: Request, _resp: Response, next: NextCallback): void => {
+            helloReq = _.pick(req, ...reqProps);
+            changeReqFn(req);
+            next();
+         });
+
+         helloRouteHandler2 = spy((req: Request, resp: Response): void => {
+            hello2Req = _.pick(req, ...reqProps);
+            resp.send('hello');
+         });
+
+         goodbyeRouteHandler = spy((req: Request, resp: Response): void => {
+            goodbyeReq = _.pick(req, ...reqProps);
+            resp.send('goodbye');
+         });
+
+         router.get('/hello', helloRouteHandler)
+            .get('/goodbye', goodbyeRouteHandler)
+            .get('/hello', helloRouteHandler2);
+
+         app.addSubRouter('/path', router);
+
+         testOutcome('GET', '/path/hello', expectedResponse);
+
+         return {
+            hello: helloRouteHandler,
+            getHelloReq: () => { return helloReq; },
+            hello2: helloRouteHandler2,
+            getHello2Req: () => { return hello2Req; },
+            goodbye: goodbyeRouteHandler,
+            getGoodbyeReq: () => { return goodbyeReq; },
+         };
+      }
+
+      it('redirects to a different route handler when req.url is changed', () => {
+         const handlers = testRoutesWithRedirect();
+
+         assert.calledOnce(handlers.hello);
+         assert.calledOnce(handlers.goodbye);
+         assert.notCalled(handlers.hello2);
+         assert.callOrder(handlers.hello, handlers.goodbye);
+      });
+
+      it('continues executing routes in the current chain before redirecting to the next match', () => {
+         const router = new Router();
+
+         let h1, h2Redirects, h3, h4ShouldBeSkipped, g1ShouldBeSkipped, g2Ends;
+
+         h1 = spy((_req: Request, _resp: Response, next: NextCallback): void => { next(); });
+
+         h2Redirects = spy((req: Request, _resp: Response, next: NextCallback): void => {
+            req.url = '/goodbye';
+            next();
+         });
+
+         h3 = spy((_req: Request, _resp: Response, next: NextCallback): void => { next(); });
+         h4ShouldBeSkipped = spy((_req: Request, _resp: Response, next: NextCallback): void => { next(); });
+         g1ShouldBeSkipped = spy((_req: Request, _resp: Response, next: NextCallback): void => { next(); });
+         g2Ends = spy((_req: Request, resp: Response): void => { resp.send('goodbye'); });
+
+         router.get('/goodbye', g1ShouldBeSkipped) // skipped because request starts at /hello
+            .get('/hello', h1, h2Redirects, h3) // even though h2 redirects to /goodbye, the chain should still run h3
+            .get('/hello', h4ShouldBeSkipped) // by now the request is for /goodbye, so skip this
+            .get('/goodbye', g2Ends); // this /goodbye handler gets called because of the redirect above
+
+         app.addSubRouter('/path', router);
+
+         testOutcome('GET', '/path/hello', 'goodbye');
+
+         // This should be skipped because it was registered *before* the `h2Redirects`
+         // handler that causes the re-route to '/goodbye'.
+         assert.notCalled(g1ShouldBeSkipped);
+         assert.calledOnce(h1);
+         // This route handler re-routes the request to '/goodbye'.
+         assert.calledOnce(h2Redirects);
+         // This is the last route handler in the `.get('/hello', h1, h2Redirects, h3)`
+         // chain. The main point of this test is to ensure that it's NOT skipped.
+         assert.calledOnce(h3);
+         assert.notCalled(h4ShouldBeSkipped);
+         assert.calledOnce(g2Ends);
+         assert.callOrder(h1, h2Redirects, h3, g2Ends);
+      });
+
+      it('ignores query string params when `request.url` changes to a URL with query params', () => {
+         const handlers = testRoutesWithRedirect((req: Request) => { req.url = '/goodbye?to=you'; });
+
+         expect(handlers.getHelloReq().url).to.strictlyEqual('/hello');
+         // Expect that the query parameters were stripped from the URL
+         expect(handlers.getGoodbyeReq().url).to.strictlyEqual('/goodbye');
+
+         // Expect that the query parameter `to` was ignored
+         expect(handlers.getGoodbyeReq().query.to).to.strictlyEqual(undefined);
+      });
+
+      it('updates path params when `request.url` changes to a URL with different path params', () => {
+         const router1 = new Router(),
+               router2 = new Router(),
+               USER_ID = '1337',
+               USERNAME = 'mluedke';
+
+         let router1Params, router2Params;
+
+         router1.get('/users/:userID', (req: Request, _resp: Response, next: NextCallback) => {
+            router1Params = req.params;
+            req.url = `/profile/${USERNAME}`;
+            next();
+         });
+
+         router2.get('/profile/:username', (req: Request, resp: Response) => {
+            router2Params = req.params;
+            resp.send(`${req.params.username} profile`);
+         });
+
+         app.addSubRouter('/admin', router1);
+         app.addSubRouter('/admin', router2);
+
+         testOutcome('GET', `/admin/users/${USER_ID}`, `${USERNAME} profile`);
+
+         expect(router1Params).to.eql({ userID: USER_ID });
+         expect(router2Params).to.eql({ username: USERNAME });
+      });
+
    });
 
 });

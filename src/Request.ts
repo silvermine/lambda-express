@@ -87,31 +87,29 @@ export default class Request {
    public readonly method: string;
 
    /**
-    * This property is much like `req.url`; however, it retains the original request URL,
-    * allowing you to rewrite `req.url` freely for internal routing purposes. For example,
-    * the "mounting" feature of `app.use()` will rewrite `req.url` to strip the mount
-    * point.
-    *
-    * TODO: We still don't support internal re-routing mid-request. We need to investigate
-    * how, exactly, Express does this, and what it would take to support it.
+    * This property is much like `req.url`; however, it always retains the original URL
+    * from the event that triggered the request, allowing you to rewrite `req.url` freely
+    * for internal routing purposes. For example, the "mounting" feature of `app.use()`
+    * will rewrite `req.url` to strip the mount point:
     *
     * ```
-    * // GET /search?q=something
-    * req.originalUrl
-    * // => "/search?q=something"
-    * ```
+    * // GET 'http://www.example.com/admin/new'
     *
-    * In a middleware function, `req.originalUrl` is a combination of `req.baseUrl` and
-    * `req.path`, as shown in the following example.
+    * let router = new Router();
     *
-    * ```
-    * app.use('/admin', function(req, res, next) {  // GET 'http://www.example.com/admin/new'
+    * router.get('/new', function(req, res, next) {
     *    console.log(req.originalUrl); // '/admin/new'
     *    console.log(req.baseUrl); // '/admin'
     *    console.log(req.path); // '/new'
+    *    console.log(req.url); // '/new'
     *    next();
     * });
+    *
+    * app.addSubRouter('/admin', router);
     * ```
+    *
+    * `req.originalUrl` stays the same even when a route handler changes `req.url` for
+    * internal re-routing. See `req.url` for an example of internal re-routing.
     */
    public readonly originalUrl: string;
 
@@ -141,24 +139,6 @@ export default class Request {
     * `decodeURIComponent`).
     */
    public readonly params: Readonly<StringMap>;
-
-   /**
-    * Contains the path part of the request URL.
-    *
-    * ```
-    * // example.com/users?sort=desc
-    * req.path // => "/users"
-    * ```
-    *
-    * When called from a middleware, the mount point is not included in req.path. See
-    * `req.originalUrl` for more details.
-    */
-   public readonly path: string;
-
-   /**
-    * Synonymous with `req.path`.
-    */
-   public readonly url: string;
 
    /**
     * Contains the request protocol string: either `http` or (for TLS requests) `https`
@@ -226,10 +206,6 @@ export default class Request {
     */
    public readonly eventSourceType: ('ALB' | 'APIGW');
 
-   // TODO: maybe some of those properties should not be read-only ... for example, how
-   // would some middleware do the equivalent of an internal redirect? How does Express
-   // handle that?
-
    /**
     * The body of the request. If the body is an empty value (e.g. `''`), `req.body` will
     * be `null` to make body-exists checks (e.g. `if (req.body)`) simpler.
@@ -239,10 +215,29 @@ export default class Request {
     */
    public body?: unknown;
 
+   protected _parentRequest?: Request;
+   protected _url: string;
+   protected _path: string;
+
    private readonly _headers: StringArrayOfStringsMap;
    private readonly _event: RequestEvent;
 
-   public constructor(app: Application, event: RequestEvent, context: HandlerContext, baseURL: string = '', params: StringMap = {}) {
+   public constructor(app: Application, eventOrRequest: RequestEvent | Request, context: HandlerContext,
+      baseURL: string = '', params: StringMap = {}) {
+      let event: RequestEvent,
+          path: string;
+
+      if (eventOrRequest instanceof Request) {
+         // Make this request a sub-request of the request passed into the constructor
+         this._parentRequest = eventOrRequest;
+         path = this._parentRequest.path.substring(baseURL.length);
+         baseURL = this._parentRequest.baseUrl + baseURL;
+         event = this._parentRequest._event;
+      } else {
+         event = eventOrRequest;
+         path = event.path;
+      }
+
       this.app = app;
       this._event = event;
       this._headers = this._parseHeaders(event);
@@ -267,19 +262,108 @@ export default class Request {
 
       // Fields related to routing:
       this.baseUrl = baseURL;
-      this.path = this.url = event.path;
-      this.originalUrl = baseURL + event.path;
+      this._path = this._url = path;
+      // Despite the fact that the Express docs say that the `originalUrl` is `baseUrl +
+      // path`, it's actually always equal to the original URL that initiated the request.
+      // If, for example, a route handler changes the `url` of a request, the `path` is
+      // changed too, *but* `originalUrl` stays the same. This would not be the case if
+      // `originalUrl = `baseUrl + path`. See the documentation on the `url` getter for
+      // more details.
+      this.originalUrl = event.path;
       this.params = Object.freeze(params);
    }
+
+   /** PUBLIC PROPERTIES: GETTERS AND SETTERS */
+
+   /**
+    * `req.url` is the same as `req.path` in most cases.
+    *
+    * However, route handlers and other middleware may change the value of `req.url` to
+    * redirect the request to other registered middleware. For example:
+    *
+    * ```
+    * // GET example.com/admin/users/1337
+    *
+    * const router1 = new express.Router(),
+    *       router2 = new express.Router();
+    *
+    * router1.get('/users/:userID', function(req, res, next) {
+    *    // ...
+    *    if (req.params.userID === authenticatedUser.id) {
+    *       // User ID is the same as the authenticated user's. Re-route to user profile
+    *       // handler:
+    *       req.url = '/profile';
+    *       return next();
+    *    }
+    *    // ...
+    * });
+    *
+    * router2.get('/profile', function(req, res) {
+    *    console.log(req.originalUrl); // '/admin/users/1337'
+    *    console.log(req.baseUrl); // '/admin'
+    *    console.log(req.path); // '/profile'
+    *    console.log(req.url); // '/profile'
+    *    // ...
+    * });
+    *
+    * app.addSubRouter('/admin', router1);
+    * app.addSubRouter('/admin', router2);
+    * ```
+    *
+    * In the example above, the `GET` request to `/admin/users/1337` is re-routed to the
+    * `/profile` handler in `router2`. Any other route handlers on `router1` that would
+    * have handled the `/users/1337` route are skiped. Also, notice that `req.url` keeps
+    * the value given to it by `router1`'s route handler, but `req.originalUrl` stays the
+    * same.
+    *
+    * If the route handler or middleware that changes `req.url` adds a query string to
+    * `req.url`, the query string is retained on the `req.url` property but the query
+    * string keys and values are *not* parsed and `req.params` is *not* updated. This
+    * follows Express' apparent behavior when handling internal re-routing with URLs that
+    * contain query strings.
+    */
+   public get url(): string {
+      return this._url;
+   }
+
+   public set url(url: string) {
+      url = url || '';
+
+      // Update the parent request's URL with the new URL value
+      if (this._parentRequest) {
+         let indexOfCurrentURL = this._parentRequest.url.length - this._url.length;
+
+         this._parentRequest.url = this._parentRequest.url.substring(0, indexOfCurrentURL) + url;
+      }
+      this._url = url;
+      // Remove query parameters from the URL to form the new path
+      this._path = url.split('?')[0];
+   }
+
+   /**
+   * Contains the path part of the request URL.
+   *
+   * ```
+   * // example.com/users?sort=desc
+   * req.path // => "/users"
+   * ```
+   *
+   * When referenced from middleware, the mount point is not included in `req.path`. See
+   * `req.originalUrl` for more details.
+   *
+   * When any middleware changes the value of `req.url` for internal re-routing,
+   * `req.path` is updated also. See `req.url` for an example of internal re-routing.
+   */
+   public get path(): string {
+      return this._path;
+   }
+
+   // Disable changing the `path` via the public API by not implementing a setter here.
 
    /** CLONING FUNCTION */
 
    public makeSubRequest(baseURL: string, params?: StringMap): Request {
-      const restOfPath = this._event.path.substring(baseURL.length),
-            // TODO: this isn't a deep clone - does it need to be?
-            event = _.extend({}, this._event, { path: restOfPath });
-
-      return new Request(this.app, event, this.context, baseURL, params);
+      return new Request(this.app, this, this.context, baseURL, params);
    }
 
    /** CONVENIENCE FUNCTIONS */
