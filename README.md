@@ -6,6 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/silvermine/lambda-express/badge.svg?branch=master)](https://coveralls.io/github/silvermine/lambda-express?branch=master)
 [![Dependency Status](https://david-dm.org/silvermine/lambda-express.svg)](https://david-dm.org/silvermine/lambda-express)
 [![Dev Dependency Status](https://david-dm.org/silvermine/lambda-express/dev-status.svg)](https://david-dm.org/silvermine/lambda-express#info=devDependencies&view=table)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
 
 ## What?
