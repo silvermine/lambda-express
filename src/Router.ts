@@ -8,7 +8,7 @@ import {
    NextCallback,
    ErrorHandlingRequestProcessor,
 } from './interfaces';
-import { IRequestMatchingProcessorChain, IProcessorChain } from './chains/ProcessorChain';
+import { IRequestMatchingProcessorChain } from './chains/ProcessorChain';
 import { Request, Response } from '.';
 import { wrapRequestProcessor, wrapRequestProcessors } from './utils/wrapRequestProcessor';
 import { RouteMatchingProcessorChain } from './chains/RouteMatchingProcessorChain';
@@ -35,15 +35,33 @@ export default class Router implements IRouter {
    // using the case-sensitivity setting of this router.
 
    public handle(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
-      const processors = _.filter(this._processors, (p) => { return p.matches(req); });
+      const processors = this._processors;
 
-      const go = _.reduce(processors.reverse(), (next: NextCallback, p: IProcessorChain): NextCallback => {
-         return (err) => {
-            p.run(err, req, resp, next);
-         };
-      }, done);
+      let index = 0;
 
-      go(originalErr);
+      const processRequest = (err: unknown, processorReq: Request, processorResp: Response, next: NextCallback): void => {
+         let processor = processors[index];
+
+         index += 1;
+
+         if (processor === undefined) {
+            // We've looped through all available processors.
+            return next(err);
+         } else if (processor.matches(processorReq)) {
+            // ^^^^ User-defined route handlers may change the request object's URL to
+            // re-route the request to other route handlers. Therefore, we must re-check
+            // whether the current processor matches the request object after every
+            // processor is run.
+            processor.run(err, processorReq, processorResp, (processorError) => {
+               processRequest(processorError, processorReq, processorResp, next);
+            });
+         } else {
+            // Current processor does not match. Continue.
+            processRequest(err, processorReq, processorResp, next);
+         }
+      };
+
+      processRequest(originalErr, req, resp, done);
    }
 
    /**

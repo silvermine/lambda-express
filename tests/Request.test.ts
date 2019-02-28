@@ -36,6 +36,32 @@ describe('Request', () => {
          expect(new Request(app, evt2, handlerContext()).method).to.strictlyEqual('');
       });
 
+      it('sets URL related fields correctly, when created from an event', () => {
+         const event = albRequest(),
+               request = new Request(app, event, handlerContext());
+
+         expect(request.url).to.strictlyEqual(event.path);
+         expect(request.path).to.strictlyEqual(event.path);
+         expect(request.originalUrl).to.strictlyEqual(event.path);
+      });
+
+      it('sets URL related fields correctly, when created from a parent request', () => {
+         const event = albRequest();
+
+         let parentRequest, request;
+
+         event.path = '/a/b/c';
+
+         parentRequest = new Request(app, event, handlerContext());
+         request = new Request(app, parentRequest, handlerContext(), '/a/b');
+
+         expect(request.url).to.strictlyEqual('/c');
+         expect(request.path).to.strictlyEqual('/c');
+         expect(request.baseUrl).to.strictlyEqual('/a/b');
+         expect(request.originalUrl).to.strictlyEqual(event.path);
+         expect(request.originalUrl).to.strictlyEqual(parentRequest.url);
+      });
+
    });
 
    describe('makeSubRequest', () => {
@@ -466,6 +492,71 @@ describe('Request', () => {
 
             expect(req.body).to.strictlyEqual(body);
          });
+      });
+
+   });
+
+   describe('`url` property', () => {
+
+      it('should be able to be updated', () => {
+         let req = new Request(app, apiGatewayRequest(), handlerContext()),
+             newURL = '/test';
+
+         // Assert that we have a valid test
+         expect(req.url).to.not.strictlyEqual(newURL);
+
+         req.url = newURL;
+         expect(req.url).to.strictlyEqual(newURL);
+      });
+
+      it('should accept blank values', () => {
+         let req = new Request(app, apiGatewayRequest(), handlerContext()),
+             newURL = '';
+
+         // Assert that we have a valid test
+         expect(req.url).to.not.strictlyEqual(newURL);
+
+         req.url = newURL;
+         expect(req.url).to.strictlyEqual(newURL);
+      });
+
+      it('should update `path` when `url` changes', () => {
+         let req = new Request(app, apiGatewayRequest(), handlerContext()),
+             newURL = '/test';
+
+         // Assert that we have a valid test
+         expect(req.path).to.not.strictlyEqual(newURL);
+
+         req.url = newURL;
+         expect(req.path).to.strictlyEqual(newURL);
+      });
+
+      it('should update the parent request\'s `url` and related properties when a sub-request\'s `url` is updated', () => {
+         let event = apiGatewayRequest(),
+             req, subReq, subSubReq;
+
+         // Assert that we have a valid test
+         expect(event.path).to.not.strictlyEqual('/path/path/old');
+
+         event.path = '/path/path/old';
+
+         req = new Request(app, event, handlerContext());
+         subReq = req.makeSubRequest('/path');
+         subSubReq = subReq.makeSubRequest('/path');
+
+         subSubReq.url = '/new';
+
+         expect(subSubReq.url).to.strictlyEqual('/new');
+         expect(subSubReq.baseUrl).to.strictlyEqual('/path/path');
+         expect(subSubReq.originalUrl).to.strictlyEqual('/path/path/old');
+
+         expect(subReq.url).to.strictlyEqual('/path/new');
+         expect(subReq.baseUrl).to.strictlyEqual('/path');
+         expect(subReq.originalUrl).to.strictlyEqual('/path/path/old');
+
+         expect(req.url).to.strictlyEqual('/path/path/new');
+         expect(req.baseUrl).to.strictlyEqual('');
+         expect(req.originalUrl).to.strictlyEqual('/path/path/old');
       });
 
    });
