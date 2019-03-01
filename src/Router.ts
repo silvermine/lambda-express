@@ -70,14 +70,7 @@ export default class Router implements IRouter {
     * code hinting / auto-completion.
     */
    public addSubRouter(path: PathParams, router: Router): this {
-      // Note: this overriding of the case sensitivity of the passed-in router is likely
-      // ineffective for most usecases because the user probably created their router and
-      // added a bunch of routes to it before adding that router to this one. When the
-      // routes are created (technically the `IRequestMatchingProcessorChain` objects, in
-      // particular `RouteMatchingProcessorChain`), the case sensitivity is already set
-      // (inherited from the router that created the chain).
-      router.routerOptions.caseSensitive = this.routerOptions.caseSensitive;
-      this._processors.push(new SubRouterProcessorChain(path, router));
+      this._processors.push(new SubRouterProcessorChain(path, router, this.routerOptions));
       return this;
    }
 

@@ -46,6 +46,21 @@ describe('integration tests', () => {
       });
    };
 
+   const testOutcome = (method: string, path: string, expectedBody: string): void => {
+      const cb = spy(),
+            evt = makeRequestEvent(path, apiGatewayRequest(), method);
+
+      app.run(evt, handlerContext(), cb);
+
+      assert.calledOnce(cb);
+      assert.calledWithExactly(cb, undefined, {
+         statusCode: 200,
+         body: expectedBody,
+         isBase64Encoded: false,
+         multiValueHeaders: { 'Content-Type': [ 'text/html' ] },
+      });
+   };
+
    describe('very simple smoke test that hits a variety of touch points', () => {
       const test = (evt: RequestEvent): SinonSpy => {
          const cb = spy();
@@ -227,6 +242,66 @@ describe('integration tests', () => {
          testWithLastResortHandler(200, '200 OK', [ 'Content-Type-HTML' ], 'will match');
       });
 
+      it('matches sub-routes case-insensitively when parent route is case-sensitive and sub-route is case-insensitive', () => {
+         const router = new Router({ caseSensitive: false });
+
+         // App (parent, `/hello`): case-sensitive
+         // Router (`/world`): case-insensitive
+         expect(app.routerOptions.caseSensitive).to.eql(false);
+         app.enable('case sensitive routing');
+         expect(app.routerOptions.caseSensitive).to.eql(true);
+
+         app.addSubRouter('/hello', router);
+         router.get('/world', (_req: Request, resp: Response) => { resp.send('Hello world'); });
+
+         // Return a fallback response
+         app.use((_req: Request, resp: Response) => { resp.send('not found'); });
+
+         // Exact match
+         testOutcome('GET', '/hello/world', 'Hello world');
+
+         // App (parent, `/hello`): case-sensitive
+         testOutcome('GET', '/HELLO/world', 'not found');
+         testOutcome('GET', '/Hello/world', 'not found');
+         testOutcome('GET', '/HELLO/WORLD', 'not found');
+
+         // Router (`/world`): case-insensitive
+         testOutcome('GET', '/hello/WORLD', 'Hello world');
+         testOutcome('GET', '/hello/World', 'Hello world');
+
+         // Mismatch
+         testOutcome('GET', '/goodbye/world', 'not found');
+      });
+
+      it('matches sub-routes case-sensitively when parent route is case-insensitive and sub-route is case-sensitive', () => {
+         const router = new Router({ caseSensitive: true });
+
+         // App (parent, `/hello`): case-insensitive
+         // Router (`/world`): case-sensitive
+         expect(app.routerOptions.caseSensitive).to.eql(false);
+
+         app.addSubRouter('/hello', router);
+         router.get('/world', (_req: Request, resp: Response) => { resp.send('Hello world'); });
+
+         // Return a fallback response
+         app.use((_req: Request, resp: Response) => { resp.send('not found'); });
+
+         // Exact match
+         testOutcome('GET', '/hello/world', 'Hello world');
+
+         // App (parent, `/hello`): case-insensitive
+         testOutcome('GET', '/HELLO/world', 'Hello world');
+         testOutcome('GET', '/Hello/world', 'Hello world');
+
+         // Router (`/world`): case-sensitive
+         testOutcome('GET', '/hello/WORLD', 'not found');
+         testOutcome('GET', '/hello/World', 'not found');
+         testOutcome('GET', '/HELLO/WORLD', 'not found');
+
+         // Mismatch
+         testOutcome('GET', '/goodbye/world', 'not found');
+      });
+
    });
 
    describe('other HTTP methods', () => {
@@ -331,21 +406,6 @@ describe('integration tests', () => {
       });
 
    });
-
-   const testOutcome = (method: string, path: string, expectedBody: string): void => {
-      const cb = spy(),
-            evt = makeRequestEvent(path, apiGatewayRequest(), method);
-
-      app.run(evt, handlerContext(), cb);
-
-      assert.calledOnce(cb);
-      assert.calledWithExactly(cb, undefined, {
-         statusCode: 200,
-         body: expectedBody,
-         isBase64Encoded: false,
-         multiValueHeaders: { 'Content-Type': [ 'text/html' ] },
-      });
-   };
 
    describe('sub-routing', () => {
 
