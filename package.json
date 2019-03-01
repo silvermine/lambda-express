@@ -23,7 +23,6 @@
       "npm": "6.4.1"
    },
    "devDependencies": {
-      "@commitlint/cli": "7.5.2",
       "@commitlint/travis-cli": "7.5.2",
       "@silvermine/chai-strictly-equal": "1.1.0",
       "@silvermine/eslint-config": "2.1.0",
