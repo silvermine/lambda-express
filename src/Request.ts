@@ -1,14 +1,16 @@
+import { ILogger } from './logging/logging-types';
 import _ from 'underscore';
 import qs from 'qs';
 import cookie from 'cookie';
 import Application from './Application';
-import { RequestEvent, HandlerContext, RequestEventRequestContext } from './request-response-types';
+import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSourceType } from './request-response-types';
 import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from './utils/common-types';
+import ConsoleLogger from './logging/ConsoleLogger';
 
 export default class Request {
 
-   public static readonly SOURCE_ALB = 'ALB';
-   public static readonly SOURCE_APIGW = 'APIGW';
+   public static readonly SOURCE_ALB: LambdaEventSourceType = 'ALB';
+   public static readonly SOURCE_APIGW: LambdaEventSourceType = 'APIGW';
 
    /**
     * The application that is running this request.
@@ -204,7 +206,7 @@ export default class Request {
     * Load Balancer, `ALB`, or API Gateway, `APIGW`). See `Request.SOURCE_ALB` and
     * `Request.SOURCE_APIGW`.
     */
-   public readonly eventSourceType: ('ALB' | 'APIGW');
+   public readonly eventSourceType: LambdaEventSourceType;
 
    /**
     * The body of the request. If the body is an empty value (e.g. `''`), `req.body` will
@@ -214,6 +216,8 @@ export default class Request {
     * bodies.
     */
    public body?: unknown;
+
+   public readonly log: ILogger;
 
    protected _parentRequest?: Request;
    protected _url: string;
@@ -269,6 +273,17 @@ export default class Request {
       // more details.
       this.originalUrl = event.path;
       this.params = Object.freeze(params);
+
+      if (this._parentRequest) {
+         this.log = this._parentRequest.log;
+      } else {
+         this.log = new ConsoleLogger({
+            level: app.routerOptions.logging.level,
+            interface: this.eventSourceType,
+            fnStartTime: Date.now(),
+            getTimeUntilFnTimeout: () => { return context.getRemainingTimeInMillis(); },
+         });
+      }
    }
 
    /** PUBLIC PROPERTIES: GETTERS AND SETTERS */

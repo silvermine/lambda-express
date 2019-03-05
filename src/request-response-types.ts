@@ -138,3 +138,8 @@ export interface CookieOpts {
    // https://expressjs.com/en/api.html#res.cookie
    // https://expressjs.com/en/api.html#req.signedCookies
 }
+
+/**
+ * The types of Lambda event sources that can trigger a Request.
+ */
+export type LambdaEventSourceType = 'APIGW' | 'ALB';

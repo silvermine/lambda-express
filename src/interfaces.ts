@@ -2,6 +2,7 @@
 
 import Request from './Request';
 import Response from './Response';
+import { LogLevel } from './logging/logging-types';
 
 /**
  * The function that is passed to request processors for them to signal that they are done
@@ -91,6 +92,10 @@ export interface RouteMatchingProcessorAppender<T> {
    (path: PathParams, ...handlers: ProcessorOrProcessors[]): T;
 }
 
+export interface ApplicationLoggingOptions {
+   level: LogLevel;
+}
+
 export interface RouterOptions {
 
    /**
@@ -100,6 +105,8 @@ export interface RouterOptions {
     * case-sensitivity enabled, only the second request would match that route.
     */
    caseSensitive: boolean;
+
+   logging: ApplicationLoggingOptions;
 }
 
 export interface IRouter {

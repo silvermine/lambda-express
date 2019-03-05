@@ -4,6 +4,9 @@ import { Request, Application } from '../src';
 import { RequestEvent } from '../src/request-response-types';
 import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
 import { isKeyValueStringObject } from '../src/utils/common-types';
+import ConsoleLogger from '../src/logging/ConsoleLogger';
+import sinon from 'sinon';
+import { DebugLogObject } from '../src/logging/logging-types';
 
 describe('Request', () => {
    let app: Application, allRequestTypes: Request[], allEventTypes: RequestEvent[];
@@ -557,6 +560,45 @@ describe('Request', () => {
          expect(req.url).to.strictlyEqual('/path/path/new');
          expect(req.baseUrl).to.strictlyEqual('');
          expect(req.originalUrl).to.strictlyEqual('/path/path/old');
+      });
+
+   });
+
+   describe('`log` property', () => {
+
+      function testLog(req: Request): void {
+         let consoleSpy = sinon.spy(console, 'log'),
+             logLine: DebugLogObject;
+
+         expect(req.log).to.be.an.instanceOf(ConsoleLogger);
+
+         // Set level to `debug` to test full debug log line
+         req.log.setLevel('debug');
+         req.log.debug('test', { test: true });
+
+         sinon.assert.calledOnce(consoleSpy);
+
+         logLine = JSON.parse(consoleSpy.firstCall.args[0]);
+         expect(logLine.msg).to.strictlyEqual('test');
+         expect(logLine.data).to.eql({ test: true });
+         expect(logLine.remaining).to.be.a('number');
+         expect(logLine.timer).to.be.a('number');
+
+         consoleSpy.restore();
+      }
+
+      it('exists and logs messages', () => {
+         let req = new Request(app, apiGatewayRequest(), handlerContext());
+
+         testLog(req);
+      });
+
+      it('is inherited from parent requests to sub-requests', () => {
+         let req = new Request(app, apiGatewayRequest(), handlerContext()),
+             subReq = req.makeSubRequest('');
+
+         testLog(subReq);
+         expect(subReq.log).to.strictlyEqual(req.log);
       });
 
    });
