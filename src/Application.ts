@@ -1,8 +1,9 @@
-import { Callback } from 'aws-lambda';
+import { Callback, Context } from 'aws-lambda';
 import Router from './Router';
 import { RequestEvent, HandlerContext } from './request-response-types';
-import { StringUnknownMap } from './utils/common-types';
+import { StringUnknownMap, Writable } from './utils/common-types';
 import { Request, Response } from '.';
+import _ from 'underscore';
 
 export default class Application extends Router {
 
@@ -85,8 +86,8 @@ export default class Application extends Router {
     * @param context The context provided to the Lambda handler
     * @param cb The callback provided to the Lambda handler
     */
-   public run(evt: RequestEvent, context: HandlerContext, cb: Callback): void {
-      const req = new Request(this, evt, context),
+   public run(evt: RequestEvent, context: Context, cb: Callback): void {
+      const req = new Request(this, evt, this._createHandlerContext(context)),
             resp = new Response(this, req, cb);
 
       this.handle(undefined, req, resp, (err: unknown): void => {
@@ -97,6 +98,31 @@ export default class Application extends Router {
             resp.sendStatus(404);
          }
       });
+   }
+
+   private _createHandlerContext(context: Context): HandlerContext {
+      // keys should exist on both `HandlerContext` and `Context`
+      const keys: (keyof HandlerContext & keyof Context)[] = [
+         'functionName', 'functionVersion', 'invokedFunctionArn', 'memoryLimitInMB',
+         'awsRequestId', 'logGroupName', 'logStreamName', 'identity', 'clientContext',
+         'getRemainingTimeInMillis',
+      ];
+
+      let handlerContext: Writable<HandlerContext>;
+
+      handlerContext = _.reduce(keys, (memo, key) => {
+         let contextValue = context[key];
+
+         if (typeof contextValue === 'object' && contextValue) {
+            // Freeze sub-objects
+            memo[key] = Object.freeze(_.extend({}, contextValue));
+         } else if (typeof contextValue !== 'undefined') {
+            memo[key] = contextValue;
+         }
+         return memo;
+      }, {} as Writable<HandlerContext>);
+
+      return Object.freeze(handlerContext);
    }
 
 }

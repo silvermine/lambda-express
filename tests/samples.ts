@@ -3,11 +3,13 @@ import {
    APIGatewayEventRequestContext,
    ApplicationLoadBalancerEventRequestContext,
    APIGatewayRequestEvent,
-   HandlerContext,
    ApplicationLoadBalancerRequestEvent } from '../src/request-response-types';
+import { Context } from 'aws-lambda';
 
-export const handlerContext = (): HandlerContext => {
-   return {
+export const handlerContext = (fillAllFields: boolean = false): Context => {
+   let ctx: Context;
+
+   ctx = {
       callbackWaitsForEmptyEventLoop: true,
       logGroupName: '/aws/lambda/echo-api-prd-echo',
       logStreamName: '2019/01/31/[$LATEST]bb001267fb004ffa8e1710bba30b4ae7',
@@ -21,6 +23,32 @@ export const handlerContext = (): HandlerContext => {
       fail: () => undefined,
       succeed: () => undefined,
    };
+
+   if (fillAllFields) {
+      ctx.identity = {
+         cognitoIdentityId: 'cognitoIdentityId',
+         cognitoIdentityPoolId: 'cognitoIdentityPoolId',
+      };
+
+      ctx.clientContext = {
+         client: {
+            installationId: 'installationId',
+            appTitle: 'appTitle',
+            appVersionName: 'appVersionName',
+            appVersionCode: 'appVersionCode',
+            appPackageName: 'appPackageName',
+         },
+         env: {
+            platformVersion: 'platformVersion',
+            platform: 'platform',
+            make: 'make',
+            model: 'model',
+            locale: 'locale',
+         },
+      };
+   }
+
+   return ctx;
 };
 
 export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {

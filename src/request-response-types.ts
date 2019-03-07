@@ -30,7 +30,18 @@ export interface ResponseResult extends APIGatewayProxyResult {
  * The `context` object passed to a Lambda handler.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface HandlerContext extends Context {}
+export interface HandlerContext extends Readonly<Pick<Context,
+   'functionName'
+   | 'functionVersion'
+   | 'invokedFunctionArn'
+   | 'memoryLimitInMB'
+   | 'awsRequestId'
+   | 'logGroupName'
+   | 'logStreamName'
+   | 'identity'
+   | 'clientContext'
+   | 'getRemainingTimeInMillis'
+>> {}
 
 
 /* API GATEWAY TYPES (we export these with our own names to make it easier to modify them

@@ -246,8 +246,6 @@ export default class Request {
 
       this.eventSourceType = ('elb' in event.requestContext) ? Request.SOURCE_ALB : Request.SOURCE_APIGW;
 
-      // TODO: should something be done to limit what's exposed by these contexts? For
-      // example, make properties read-only and don't expose the callback function, etc.
       this.context = context;
       this.requestContext = event.requestContext;
 
