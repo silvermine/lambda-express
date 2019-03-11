@@ -10,6 +10,9 @@ interface MakeFunctionOpts {
    callsNextWithError?: boolean;
    callsNextRoute?: boolean;
    passesErrorToNext?: boolean;
+   returnsResolvedPromise?: boolean;
+   returnsRejectedPromise?: boolean;
+   returnsEmptyRejectedPromise?: boolean;
 }
 
 const DEFAULT_OPTS: MakeFunctionOpts = {
@@ -19,7 +22,18 @@ const DEFAULT_OPTS: MakeFunctionOpts = {
    callsNextWithError: false,
    callsNextRoute: false,
    passesErrorToNext: false,
+   returnsResolvedPromise: false,
+   returnsRejectedPromise: false,
+   returnsEmptyRejectedPromise: false,
 };
+
+function delay(value: unknown, ms: number = 4): Promise<unknown> {
+   return new Promise((resolve) => {
+      setTimeout(() => {
+         resolve(value);
+      }, ms);
+   });
+}
 
 /**
  * When using sinon assertions (especially for asserting that many functions were called,
@@ -33,7 +47,7 @@ export default function makeRequestProcessor(name: string, userOpts?: MakeFuncti
        rp: AnyRequestProcessor;
 
    if (opts.handlesErrors) {
-      rp = (err: unknown, _req: Request, _resp: Response, next: NextCallback): void => {
+      rp = (err: unknown, _req: Request, _resp: Response, next: NextCallback): void | Promise<unknown> => {
          if (opts.throwsError) {
             throw new Error(`Error from "${name}"`);
          } else if (opts.callsNextWithError) {
@@ -42,6 +56,16 @@ export default function makeRequestProcessor(name: string, userOpts?: MakeFuncti
             return next('route');
          } else if (opts.passesErrorToNext) {
             return next(err);
+         } else if (opts.returnsRejectedPromise) {
+            return delay(Promise.reject(`Rejection from "${name}"`));
+         } else if (opts.returnsEmptyRejectedPromise) {
+            return delay(Promise.reject());
+         } else if (opts.returnsResolvedPromise && opts.callsNext) {
+            return delay(undefined).then(() => {
+               next(); // eslint-disable-line callback-return
+            });
+         } else if (opts.returnsResolvedPromise) {
+            return delay(Promise.resolve());
          } else if (opts.callsNext) {
             return next();
          }
@@ -50,13 +74,23 @@ export default function makeRequestProcessor(name: string, userOpts?: MakeFuncti
       if (opts.passesErrorToNext) {
          throw new Error(`Invalid makeFunction options: ${JSON.stringify(opts)}`);
       }
-      rp = (_req: Request, _resp: Response, next: NextCallback): void => {
+      rp = (_req: Request, _resp: Response, next: NextCallback): void | Promise<unknown> => {
          if (opts.throwsError) {
             throw new Error(`Error from "${name}"`);
          } else if (opts.callsNextWithError) {
             return next(`Error from "${name}"`);
          } else if (opts.callsNextRoute) {
             return next('route');
+         } else if (opts.returnsRejectedPromise) {
+            return delay(Promise.reject(`Rejection from "${name}"`));
+         } else if (opts.returnsEmptyRejectedPromise) {
+            return delay(Promise.reject());
+         } else if (opts.returnsResolvedPromise && opts.callsNext) {
+            return delay(undefined).then(() => {
+               next(); // eslint-disable-line callback-return
+            });
+         } else if (opts.returnsResolvedPromise) {
+            return delay(Promise.resolve());
          } else if (opts.callsNext) {
             return next();
          }

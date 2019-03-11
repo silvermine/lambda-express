@@ -40,6 +40,12 @@ export interface RequestProcessor {
     * processing. Failure to either send a response or call `next` will result in a hung
     * process.
     *
+    * If this function returns a Promise object, a `catch` method will automatically be
+    * attached to the promise. If the promise is rejected, that `catch` method will call
+    * `next`, passing along the rejected value or an error if the value is empty. If the
+    * returned promise is resolved, `next` will *not* be called automatically. It is up to
+    * the handler to call `next` when appropriate.
+    *
     * @param req The request to be handled
     * @param resp The response that will be sent when the request-handling process is
     *             complete
