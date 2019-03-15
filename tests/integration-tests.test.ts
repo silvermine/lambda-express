@@ -547,4 +547,49 @@ describe('integration tests', () => {
 
    });
 
+   describe('request object', () => {
+
+      it('has an immutable context property', () => {
+         let evt = makeRequestEvent('/test', apiGatewayRequest(), 'GET'),
+             ctx = handlerContext(true),
+             handler;
+
+         function isPropFrozen(obj: any, key: string): boolean {
+            try {
+               obj[key] = 'change';
+               return false;
+            } catch(e) {
+               if (e instanceof Error) {
+                  return e.message.indexOf('Cannot assign to read only property') !== -1;
+               }
+               return false;
+            }
+         }
+
+         handler = spy((req: Request, resp: Response) => {
+            expect(req.context).to.be.an('object');
+
+            expect(isPropFrozen(req.context, 'awsRequestId'));
+            expect(isPropFrozen(req.context, 'clientContext'));
+
+            if (req.context.clientContext) {
+               expect(isPropFrozen(req.context.clientContext, 'clientContext'));
+            }
+
+            if (req.context.identity) {
+               expect(isPropFrozen(req.context.identity, 'cognitoIdentityId'));
+            }
+
+            resp.send('test');
+         });
+         app.get('*', handler);
+
+         app.run(evt, ctx, spy());
+
+         // Make sure the handler ran, otherwise the test is invalid.
+         assert.calledOnce(handler);
+      });
+
+   });
+
 });

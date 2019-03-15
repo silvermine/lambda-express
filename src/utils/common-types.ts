@@ -4,6 +4,8 @@ export interface StringMap { [s: string]: string }
 export interface StringUnknownMap { [s: string]: unknown }
 export interface StringArrayOfStringsMap { [s: string]: string[] }
 export interface KeyValueStringObject { [k: string]: (string | string[] | KeyValueStringObject) }
+// Removes `readonly` modifier and make all keys writable again
+export type Writable<T> = { -readonly [P in keyof T]-?: T[P] };
 
 export function isStringMap(o: any): o is StringMap {
    if (!_.isObject(o) || _.isArray(o)) { // because arrays are objects
