@@ -463,10 +463,15 @@ export default class Response {
     * @param o the object to send in the response
     */
    public jsonp(o: unknown): Response {
-      const queryParamName = this.app.getSetting('jsonp callback name') || 'callback',
-            callbackFunctionName = this._request.query[queryParamName as string];
+      const queryParamName = this.app.getSetting('jsonp callback name') || 'callback';
 
-      if (_.isString(callbackFunctionName)) {
+      let callbackFunctionName = this._request.query[queryParamName as string];
+
+      if (_.isArray(callbackFunctionName)) {
+         callbackFunctionName = callbackFunctionName[0];
+      }
+
+      if (_.isString(callbackFunctionName) && this._isValidJSONPCallback(callbackFunctionName)) {
          const stringified = JSON.stringify(o)
             .replace(/\u2028/g, '\\u2028')
             .replace(/\u2029/g, '\\u2029');
@@ -598,5 +603,11 @@ export default class Response {
    // attachment: https://expressjs.com/en/api.html#res.attachment
    // format: https://expressjs.com/en/api.html#res.format
    // sendFile: https://expressjs.com/en/api.html#res.sendFile
+
+   protected _isValidJSONPCallback(name?: string): boolean {
+      // The "disable" is due to eslint erring because of the `\[`
+      // eslint-disable-next-line no-useless-escape
+      return !name || _.isEmpty(name) ? false : /^[\[\]\w$.]+$/.test(name);
+   }
 
 }

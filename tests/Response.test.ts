@@ -10,6 +10,15 @@ import { RequestEvent, CookieOpts } from '../src/request-response-types';
 // function type used for reusable test extension below
 type Extender = (resp: Response, output: any) => void;
 
+// dummy class to make protected functions unit testable
+class TestResponse extends Response {
+
+   public _isValidJSONPCallback(name?: string): boolean {
+      return super._isValidJSONPCallback(name);
+   }
+
+}
+
 describe('Response', () => {
    const EMPTY_CB = (): void => {}; // eslint-disable-line no-empty-function
 
@@ -684,21 +693,27 @@ describe('Response', () => {
             evt: RequestEvent,
             msg: string | false,
             extender?: Extender,
-            overrides: { queryParamName?: string | false; responseObject?: any } = {},
+            overrides: { queryParamName?: string | false; queryParamValues?: string[]; responseObject?: any } = {},
          ): void => {
-            const o = overrides.responseObject || { foo: 'bar' },
-                  expectedBody = `/**/ typeof fooFunction === 'function' && fooFunction(${JSON.stringify(o)});`;
+            const o = overrides.responseObject || { foo: 'bar' };
+
+            let queryParamValues = overrides.queryParamValues;
+
+            if (!queryParamValues || queryParamValues.length === 0) {
+               queryParamValues = [ 'fooFunction' ];
+            }
+
+            const expectedBody = `/**/ typeof ${queryParamValues[0]} === 'function' && ${queryParamValues[0]}(${JSON.stringify(o)});`;
 
             // A false `queryParamName` means no query parameter was present
             if (overrides.queryParamName !== false) {
                let queryParamName = overrides.queryParamName || 'callback';
 
                if (evt.multiValueQueryStringParameters) {
-                  // TODO: test with multiple _different_ values
-                  evt.multiValueQueryStringParameters[queryParamName] = [ 'fooFunction' ];
+                  evt.multiValueQueryStringParameters[queryParamName] = queryParamValues;
                }
                if (evt.queryStringParameters) {
-                  evt.queryStringParameters[queryParamName] = 'fooFunction';
+                  evt.queryStringParameters[queryParamName] = queryParamValues[0];
                }
             }
 
@@ -761,6 +776,64 @@ describe('Response', () => {
          });
          it('works like JSON when no callback in query - ALB MV', () => {
             test(albMultiValHeadersRequest(), 'OK', expectJSON, { queryParamName: false });
+         });
+
+         it('works like JSON when non-callback param is in query - APIGW', () => {
+            test(apiGatewayRequest(), false, expectJSON, { queryParamName: 'notcallback' });
+         });
+         it('works like JSON when non-callback param is in query - ALB', () => {
+            test(albRequest(), 'OK', expectJSON, { queryParamName: 'notcallback' });
+         });
+         it('works like JSON when non-callback param is in query - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', expectJSON, { queryParamName: 'notcallback' });
+         });
+
+         it('uses the first callback param value listed - APIGW', () => {
+            test(apiGatewayRequest(), false, undefined, {
+               queryParamValues: [ 'callbackOne', 'callbackTwo' ],
+            });
+         });
+         it('uses the first callback param value listed - ALB', () => {
+            test(albRequest(), 'OK', undefined, {
+               queryParamValues: [ 'callbackOne', 'callbackTwo' ],
+            });
+         });
+         it('uses the first callback param value listed - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', undefined, {
+               queryParamValues: [ 'callbackOne', 'callbackTwo' ],
+            });
+         });
+
+         it('allows for the callback param value to contain an array index - APIGW', () => {
+            test(apiGatewayRequest(), false, undefined, {
+               queryParamValues: [ 'callbacks[123]' ],
+            });
+         });
+         it('allows for the callback param value to contain an array index - ALB', () => {
+            test(albRequest(), 'OK', undefined, {
+               queryParamValues: [ 'callbacks[123]' ],
+            });
+         });
+         it('allows for the callback param value to contain an array index - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', undefined, {
+               queryParamValues: [ 'callbacks[123]' ],
+            });
+         });
+
+         it('returns JSON when callback param value contains invalid characters - APIGW', () => {
+            test(apiGatewayRequest(), false, expectJSON, {
+               queryParamValues: [ 'bad;fn()' ],
+            });
+         });
+         it('returns JSON when callback param value contains invalid characters  - ALB', () => {
+            test(albRequest(), 'OK', expectJSON, {
+               queryParamValues: [ 'bad;fn()' ],
+            });
+         });
+         it('returns JSON when callback param value contains invalid characters  - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', expectJSON, {
+               queryParamValues: [ 'bad;fn()' ],
+            });
          });
 
          const utfInput = { str: 'newline \u2028 paragraph \u2029 end' };
@@ -968,6 +1041,39 @@ describe('Response', () => {
          });
       });
 
+   });
+
+   describe('_isValidJSONPCallback', () => {
+      let response: TestResponse;
+
+      beforeEach(() => {
+         response = new TestResponse(app, sampleReq, _.noop);
+      });
+
+      it('returns true for valid JSONP callbacks', () => {
+         expect(response._isValidJSONPCallback('callback')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('callback_12345')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('_abc')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('$')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('funcs[123]')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('window.callback')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('document.do_something[42]')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('run.$')).to.strictlyEqual(true);
+         // Technically "valid" with the current implementation, but not in JS. Please
+         // don't actually use these in actual code.
+         expect(response._isValidJSONPCallback('[brackets]')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('snake_ca$e')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('$_[..]_$')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('currencies[$]')).to.strictlyEqual(true);
+         expect(response._isValidJSONPCallback('Well...the_data_is_back')).to.strictlyEqual(true);
+      });
+
+      it('returns false for invalid JSONP callbacks', () => {
+         expect(response._isValidJSONPCallback()).to.strictlyEqual(false);
+         expect(response._isValidJSONPCallback(undefined)).to.strictlyEqual(false);
+         expect(response._isValidJSONPCallback('')).to.strictlyEqual(false);
+         expect(response._isValidJSONPCallback('bad;func()')).to.strictlyEqual(false);
+      });
    });
 
 });
