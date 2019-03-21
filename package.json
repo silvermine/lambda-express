@@ -6,6 +6,7 @@
    "types": "./dist/types/index.d.ts",
    "module": "./dist/esm/index",
    "scripts": {
+      "prepare": "grunt build",
       "test": "TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts"
    },
    "author": "Jeremy Thomerson",
