@@ -67,3 +67,9 @@ export function isStringArrayOfStringsMap(o: any): o is StringArrayOfStringsMap 
       return memo && _.isString(k) && isArrayOfStrings(v);
    }, true);
 }
+
+export function isPromise(o: any): o is Promise<unknown> {
+   return o
+      && typeof o === 'object'
+      && typeof o.then === 'function';
+}
