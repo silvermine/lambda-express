@@ -467,7 +467,11 @@ export default class Response {
             callbackFunctionName = this._request.query[queryParamName as string];
 
       if (_.isString(callbackFunctionName)) {
-         this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${JSON.stringify(o)});`;
+         const stringified = JSON.stringify(o)
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+
+         this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${stringified});`;
          return this.type('text/javascript; charset=utf-8').end();
       }
 

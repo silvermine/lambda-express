@@ -680,15 +680,19 @@ describe('Response', () => {
       });
 
       describe('jsonp', () => {
-         const test = (evt: RequestEvent, msg: string | false, extender?: Extender, overrideQueryParamName?: string | false): void => {
-            let o = { foo: 'bar' },
-                queryParamName = overrideQueryParamName || 'callback',
-                body = `/**/ typeof fooFunction === 'function' && fooFunction(${JSON.stringify(o)});`;
+         const test = (
+            evt: RequestEvent,
+            msg: string | false,
+            extender?: Extender,
+            overrides: { queryParamName?: string | false; responseObject?: any } = {},
+         ): void => {
+            const o = overrides.responseObject || { foo: 'bar' },
+                  expectedBody = `/**/ typeof fooFunction === 'function' && fooFunction(${JSON.stringify(o)});`;
 
-            if (overrideQueryParamName === false) {
-               // false means no query parameter was present
-               body = JSON.stringify(o);
-            } else {
+            // A false `queryParamName` means no query parameter was present
+            if (overrides.queryParamName !== false) {
+               let queryParamName = overrides.queryParamName || 'callback';
+
                if (evt.multiValueQueryStringParameters) {
                   // TODO: test with multiple _different_ values
                   evt.multiValueQueryStringParameters[queryParamName] = [ 'fooFunction' ];
@@ -698,7 +702,7 @@ describe('Response', () => {
                }
             }
 
-            let output = makeOutput(200, msg, body);
+            const output = makeOutput(200, msg, expectedBody);
 
             resp = new Response(app, new Request(app, evt, handlerContext()), cb);
             output.multiValueHeaders['Content-Type'] = [ 'text/javascript; charset=utf-8' ];
@@ -733,17 +737,47 @@ describe('Response', () => {
             app.setSetting('jsonp callback name', 'cbFnName');
          };
 
-         it('works with custom callback param name - APIGW', () => { test(apiGatewayRequest(), false, ext2, 'cbFnName'); });
-         it('works with custom callback param name - ALB', () => { test(albRequest(), 'OK', ext2, 'cbFnName'); });
-         it('works with custom callback param name - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', ext2, 'cbFnName'); });
+         it('works with custom callback param name - APIGW', () => {
+            test(apiGatewayRequest(), false, ext2, { queryParamName: 'cbFnName' });
+         });
+         it('works with custom callback param name - ALB', () => {
+            test(albRequest(), 'OK', ext2, { queryParamName: 'cbFnName' });
+         });
+         it('works with custom callback param name - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', ext2, { queryParamName: 'cbFnName' });
+         });
 
-         const ext3: Extender = (_r, o): void => {
+         const expectJSON: Extender = (_r, o): void => {
             o.multiValueHeaders['Content-Type'] = [ 'application/json; charset=utf-8' ];
+            delete o.multiValueHeaders['X-Content-Type-Options'];
+            o.body = JSON.stringify({ foo: 'bar' });
          };
 
-         it('works like JSON when no callback in query - APIGW', () => { test(apiGatewayRequest(), false, ext3, false); });
-         it('works like JSON when no callback in query - ALB', () => { test(albRequest(), 'OK', ext3, false); });
-         it('works like JSON when no callback in query - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', ext3, false); });
+         it('works like JSON when no callback in query - APIGW', () => {
+            test(apiGatewayRequest(), false, expectJSON, { queryParamName: false });
+         });
+         it('works like JSON when no callback in query - ALB', () => {
+            test(albRequest(), 'OK', expectJSON, { queryParamName: false });
+         });
+         it('works like JSON when no callback in query - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', expectJSON, { queryParamName: false });
+         });
+
+         const utfInput = { str: 'newline \u2028 paragraph \u2029 end' };
+
+         const ext3: Extender = (_r, o): void => {
+            o.body = '/**/ typeof fooFunction === \'function\' && fooFunction({"str":"newline \\u2028 paragraph \\u2029 end"});';
+         };
+
+         it('escapes UTF newline and paragraph separators - APIGW', () => {
+            test(apiGatewayRequest(), false, ext3, { responseObject: utfInput });
+         });
+         it('escapes UTF newline and paragraph separators - ALB', () => {
+            test(albRequest(), 'OK', ext3, { responseObject: utfInput });
+         });
+         it('escapes UTF newline and paragraph separators - ALB MV', () => {
+            test(albMultiValHeadersRequest(), 'OK', ext3, { responseObject: utfInput });
+         });
       });
 
       describe('redirect', () => {
