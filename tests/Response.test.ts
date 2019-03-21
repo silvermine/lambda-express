@@ -10,7 +10,7 @@ import { RequestEvent, CookieOpts } from '../src/request-response-types';
 // function type used for reusable test extension below
 type Extender = (resp: Response, output: any) => void;
 
-describe('Request', () => {
+describe('Response', () => {
    const EMPTY_CB = (): void => {}; // eslint-disable-line no-empty-function
 
    let app: Application, sampleReq: Request, sampleResp: Response;
@@ -19,7 +19,6 @@ describe('Request', () => {
       app = new Application();
       sampleReq = new Request(app, apiGatewayRequest(), handlerContext());
       sampleResp = new Response(app, sampleReq, EMPTY_CB);
-
    });
 
    describe('constructor', () => {
