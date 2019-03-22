@@ -721,6 +721,8 @@ describe('Response', () => {
 
             resp = new Response(app, new Request(app, evt, handlerContext()), cb);
             output.multiValueHeaders['Content-Type'] = [ 'text/javascript; charset=utf-8' ];
+            // See silvermine/lambda-express#38
+            output.multiValueHeaders['X-Content-Type-Options'] = [ 'nosniff' ];
 
             if (extender) {
                extender(resp, output);

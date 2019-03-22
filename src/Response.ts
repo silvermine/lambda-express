@@ -476,8 +476,16 @@ export default class Response {
             .replace(/\u2028/g, '\\u2028')
             .replace(/\u2029/g, '\\u2029');
 
+         // NOTE: The `/**/` is a security mitigation for "Rosetta Flash JSONP abuse", see
+         // silvermine/lambda-express#38. The `typeof` is to prevent errors on the client
+         // if the callback function doesn't exist, see expressjs/express#1773.
          this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${stringified});`;
-         return this.type('text/javascript; charset=utf-8').end();
+
+         return this.type('text/javascript; charset=utf-8')
+            // `nosniff` is set to mitigate "Rosetta Flash JSONP abuse", see
+            // silvermine/lambda-express#38
+            .set('X-Content-Type-Options', 'nosniff')
+            .end();
       }
 
       return this.json(o);
