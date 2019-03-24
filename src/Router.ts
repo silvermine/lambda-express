@@ -7,6 +7,7 @@ import {
    RouterOptions,
    NextCallback,
    ErrorHandlingRequestProcessor,
+   IRoute,
 } from './interfaces';
 import { IRequestMatchingProcessorChain } from './chains/ProcessorChain';
 import { Request, Response } from '.';
@@ -14,6 +15,7 @@ import { wrapRequestProcessor, wrapRequestProcessors } from './utils/wrapRequest
 import { RouteMatchingProcessorChain } from './chains/RouteMatchingProcessorChain';
 import { MatchAllRequestsProcessorChain } from './chains/MatchAllRequestsProcessorChain';
 import { SubRouterProcessorChain } from './chains/SubRouterProcessorChain';
+import Route from './Route';
 
 const DEFAULT_OPTS: RouterOptions = {
    caseSensitive: false,
@@ -28,11 +30,9 @@ export default class Router implements IRouter {
       this.routerOptions = _.defaults(options, DEFAULT_OPTS);
    }
 
-   // TODO: do we need `router.route`?
-   // https://expressjs.com/en/guide/routing.html#app-route
-   // https://expressjs.com/en/4x/api.html#router.route
-   // If we do add it, we need to set the case-sensitivity of the sub-router it creates
-   // using the case-sensitivity setting of this router.
+   public route(prefix: PathParams): IRoute {
+      return new Route(prefix, this);
+   }
 
    public handle(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
       const processors = this._processors;

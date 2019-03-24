@@ -176,4 +176,79 @@ export interface IRouter {
     */
    handle(err: unknown, req: Request, resp: Response, done: NextCallback): void;
 
+   /**
+    * Returns an instance of a route-building helper class, which you can then use to
+    * handle HTTP verbs with optional middleware. Use app.route() to avoid duplicate route
+    * names (and thus typo errors). For example:
+    *
+    * ```
+    * app.route('/hello')
+    *    .all(function(req, res, next) {
+    *       // Runs for all HTTP verbs
+    *    })
+    *    .get(function(req, res, next) {
+    *       // Handle GETs to /hello
+    *       res.json(...);
+    *    })
+    *    .post(function(req, res, next) {
+    *       // Handle POSTs to /hello
+    *    });
+    * ```
+    */
+   route(path: PathParams): IRoute;
+
+}
+
+export interface IRoute {
+
+   /**
+    * Express-standard routing method for adding handlers that get invoked regardless of
+    * the request method (e.g. `OPTIONS`, `GET`, `POST`, etc) for a specific path (or set
+    * of paths).
+    */
+   all: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `HEAD` requests.
+    */
+   head: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `GET` requests.
+    */
+   get: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `POST` requests.
+    */
+   post: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `PUT` requests.
+    */
+   put: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `DELETE` requests.
+    */
+   delete: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `PATCH` requests.
+    */
+   patch: RouteProcessorAppender<this>;
+
+   /**
+    * Express-standard routing method for `OPTIONS` requests.
+    */
+   options: RouteProcessorAppender<this>;
+
+}
+
+export interface RouteProcessorAppender<T> {
+
+   /**
+    * @param handlers the processors to mount to this route's path
+    */
+   (...handlers: ProcessorOrProcessors[]): T;
 }

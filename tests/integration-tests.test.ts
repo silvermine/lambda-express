@@ -3,7 +3,7 @@ import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersReques
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
-import { NextCallback } from '../src/interfaces';
+import { NextCallback, IRoute, IRouter } from '../src/interfaces';
 import { expect } from 'chai';
 import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '../src/utils/common-types';
 
@@ -588,6 +588,103 @@ describe('integration tests', () => {
 
          // Make sure the handler ran, otherwise the test is invalid.
          assert.calledOnce(handler);
+      });
+
+   });
+
+   describe('building routes with router.route', () => {
+
+      it('is chainable', () => {
+         let handler = (_req: Request, resp: Response): void => { resp.send('Test'); },
+             getSpy = spy(handler),
+             postSpy = spy(handler),
+             putSpy = spy(handler);
+
+         app.route('/test')
+            .get(getSpy)
+            .post(postSpy)
+            .put(putSpy);
+
+         // Ensure that chained handlers were registered properly
+
+         testOutcome('GET', '/test', 'Test');
+         assert.calledOnce(getSpy);
+         assert.notCalled(postSpy);
+         assert.notCalled(putSpy);
+         getSpy.resetHistory();
+
+         testOutcome('POST', '/test', 'Test');
+         assert.calledOnce(postSpy);
+         assert.notCalled(getSpy);
+         assert.notCalled(putSpy);
+         postSpy.resetHistory();
+
+         testOutcome('PUT', '/test', 'Test');
+         assert.calledOnce(putSpy);
+         assert.notCalled(getSpy);
+         assert.notCalled(postSpy);
+         putSpy.resetHistory();
+      });
+
+      it('registers route handlers properly', () => {
+         let methods: (keyof IRoute & keyof IRouter)[],
+             allHandler: SinonSpy,
+             route: IRoute;
+
+         route = app.route('/test');
+
+         // methods to test
+         methods = [ 'get', 'post', 'put', 'delete', 'head', 'options', 'patch' ];
+
+         // Register handler that runs for every request
+         allHandler = spy((_req: Request, _resp: Response, next: NextCallback) => { next(); });
+         route.all(allHandler);
+
+
+         // Register a handler for each method
+         const handlers = _.reduce(methods, (memo, method) => {
+            let handler = spy((_req: Request, resp: Response) => { resp.send(`Test ${method}`); });
+
+            // Save the handler spy for testing later
+            memo[method] = handler;
+
+            // add the handler to our route
+            route[method](handler);
+
+            return memo;
+         }, {} as { [k: string]: SinonSpy });
+
+         app.use((_req: Request, resp: Response) => {
+            resp.send('not found');
+         });
+
+         // Run once for each method type
+         // Both a path with and without a trailing slash should match
+         _.each([ '/test', '/test/' ], (path) => {
+            _.each(methods, (method) => {
+               testOutcome(method.toUpperCase(), path, `Test ${method}`);
+
+               // Check that the "all" handler was called
+               assert.calledOnce(allHandler);
+               allHandler.resetHistory();
+
+               // Check that only the one handler was called
+               _.each(handlers, (handler, handlerMethod) => {
+                  if (method === handlerMethod) {
+                     assert.calledOnce(handler);
+                  } else {
+                     assert.notCalled(handler);
+                  }
+                  handler.resetHistory();
+               });
+            });
+         });
+
+         // Other tests
+         _.each(methods, (method) => {
+            // Ensure only exact matches trigger the route handler
+            testOutcome(method.toUpperCase(), '/test/anything', 'not found');
+         });
       });
 
    });
