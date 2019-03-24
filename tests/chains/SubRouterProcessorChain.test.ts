@@ -29,7 +29,7 @@ describe('SubRouterProcessorChain', () => {
          let app = new Application(),
              req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
              router = new TestRouter(spy()),
-             chain = new SubRouterProcessorChain(routes, router);
+             chain = new SubRouterProcessorChain(routes, router, app.routerOptions);
 
          expect(chain.matches(req)).to.eql(expectation);
       };
@@ -58,7 +58,7 @@ describe('SubRouterProcessorChain', () => {
              done = spy(),
              handle = spy(),
              router = new TestRouter(handle),
-             chain = new SubRouterProcessorChain(routes, router);
+             chain = new SubRouterProcessorChain(routes, router, app.routerOptions);
 
          chain.run('nothing', req, resp, done);
          assert.calledOnce(handle);
