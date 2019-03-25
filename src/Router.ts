@@ -19,6 +19,7 @@ import Route from './Route';
 
 const DEFAULT_OPTS: RouterOptions = {
    caseSensitive: false,
+   logging: { level: 'info' },
 };
 
 export default class Router implements IRouter {
@@ -26,7 +27,7 @@ export default class Router implements IRouter {
    public readonly routerOptions: RouterOptions;
    private readonly _processors: IRequestMatchingProcessorChain[] = [];
 
-   public constructor(options?: RouterOptions) {
+   public constructor(options?: Partial<RouterOptions>) {
       this.routerOptions = _.defaults(options, DEFAULT_OPTS);
    }
 
