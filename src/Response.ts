@@ -463,12 +463,29 @@ export default class Response {
     * @param o the object to send in the response
     */
    public jsonp(o: unknown): Response {
-      const queryParamName = this.app.getSetting('jsonp callback name') || 'callback',
-            callbackFunctionName = this._request.query[queryParamName as string];
+      const queryParamName = this.app.getSetting('jsonp callback name') || 'callback';
 
-      if (_.isString(callbackFunctionName)) {
-         this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${JSON.stringify(o)});`;
-         return this.type('text/javascript; charset=utf-8').end();
+      let callbackFunctionName = this._request.query[queryParamName as string];
+
+      if (_.isArray(callbackFunctionName)) {
+         callbackFunctionName = callbackFunctionName[0];
+      }
+
+      if (_.isString(callbackFunctionName) && this._isValidJSONPCallback(callbackFunctionName)) {
+         const stringified = JSON.stringify(o)
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+
+         // NOTE: The `/**/` is a security mitigation for "Rosetta Flash JSONP abuse", see
+         // silvermine/lambda-express#38. The `typeof` is to prevent errors on the client
+         // if the callback function doesn't exist, see expressjs/express#1773.
+         this._body = `/**/ typeof ${callbackFunctionName} === 'function' && ${callbackFunctionName}(${stringified});`;
+
+         return this.type('text/javascript; charset=utf-8')
+            // `nosniff` is set to mitigate "Rosetta Flash JSONP abuse", see
+            // silvermine/lambda-express#38
+            .set('X-Content-Type-Options', 'nosniff')
+            .end();
       }
 
       return this.json(o);
@@ -594,5 +611,11 @@ export default class Response {
    // attachment: https://expressjs.com/en/api.html#res.attachment
    // format: https://expressjs.com/en/api.html#res.format
    // sendFile: https://expressjs.com/en/api.html#res.sendFile
+
+   protected _isValidJSONPCallback(name?: string): boolean {
+      // The "disable" is due to eslint erring because of the `\[`
+      // eslint-disable-next-line no-useless-escape
+      return !name || _.isEmpty(name) ? false : /^[\[\]\w$.]+$/.test(name);
+   }
 
 }
