@@ -1,6 +1,6 @@
 {
    "name": "@silvermine/lambda-express",
-   "version": "0.1.0",
+   "version": "0.2.0",
    "description": "",
    "main": "./dist/commonjs/index",
    "types": "./dist/types/index.d.ts",
