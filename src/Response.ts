@@ -523,7 +523,23 @@ export default class Response {
          path = args[0];
       }
 
-      return this.status(code).location(path).end();
+      // NOTE: We must set the status and location before creating the response body. The
+      // status and location functions contain logic needed to properly create the body.
+      // (e.g. status message creation and 'back' handling)
+      this.status(code).location(path);
+
+      const target = _.first(this.getHeaders().Location);
+
+      // TODO: Once Request supports parsing the accept headers, add support for returning
+      // an HTML response (assuming the request accepts HTML back). See:
+      // https://github.com/expressjs/express/blob/3d10279826f59bf68e28995ce423f7bc4d2f11cf/lib/response.js#L930-L933
+      const body = this.getStatus().message + '. Redirecting to ' + target;
+
+      if (this._request.method !== 'HEAD') {
+         this._body = body;
+      }
+
+      return this.end();
    }
 
    /**

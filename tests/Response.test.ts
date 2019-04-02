@@ -856,6 +856,24 @@ describe('Response', () => {
       });
 
       describe('redirect', () => {
+         it('returns a redirect for the given path', () => {
+            const evt = albMultiValHeadersRequest(),
+                  req = new Request(app, evt, handlerContext()),
+                  target = 'https://en.wikipedia.org/wiki/HTTP_referer';
+
+            resp = new Response(app, req, cb);
+
+            const output = makeOutput(302, 'Found', 'Found. Redirecting to ' + target, {
+               'Location': [ target ],
+            });
+
+            resp.redirect(target);
+
+            addHeadersFromMultiValueHeaders(resp, output);
+            assert.calledOnce(cb);
+            expect(cb.firstCall.args).to.eql([ undefined, output ]);
+         });
+
          const testWithBack = (referer: string | null | false, expectation: string, code?: number, msg?: string): void => {
             it(`redirects - special value 'back', status ${code}, referer '${referer}'`, () => {
                let evt;
@@ -880,7 +898,9 @@ describe('Response', () => {
 
                resp = new Response(app, req, cb);
 
-               const output = makeOutput(code ? code : 302, msg ? msg : 'Found', '', {
+               const expectedBody = (msg ? msg : 'Found') + '. Redirecting to ' + expectation;
+
+               const output = makeOutput(code ? code : 302, msg ? msg : 'Found', expectedBody, {
                   'Location': [ expectation ],
                });
 
@@ -918,6 +938,24 @@ describe('Response', () => {
             testWithBack('https://example.com/foo', 'https://example.com/foo', code, msg);
             testWithBack('/homepage', '/homepage', code, msg);
             testWithBack(false, '/', code, msg);
+         });
+
+         it('doesn\'t return a body for HEAD requests', () => {
+            const evt = _.extend(albMultiValHeadersRequest(), { httpMethod: 'HEAD' }),
+                  req = new Request(app, evt, handlerContext()),
+                  target = 'https://en.wikipedia.org/wiki/HTTP_referer';
+
+            resp = new Response(app, req, cb);
+
+            const output = makeOutput(302, 'Found', '', {
+               'Location': [ target ],
+            });
+
+            resp.redirect(target);
+
+            addHeadersFromMultiValueHeaders(resp, output);
+            assert.calledOnce(cb);
+            expect(cb.firstCall.args).to.eql([ undefined, output ]);
          });
 
       });
