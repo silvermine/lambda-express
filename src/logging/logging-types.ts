@@ -19,7 +19,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   trace(msg: string, data: unknown): void;
+   trace(msg: string, data?: unknown): void;
 
    /**
     * Log a message at the `debug` log level. The logger will only log a message for this
@@ -29,7 +29,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   debug(msg: string, data: unknown): void;
+   debug(msg: string, data?: unknown): void;
 
    /**
     * Log a message at the `info` log level. The logger will only log a message for this
@@ -39,7 +39,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   info(msg: string, data: unknown): void;
+   info(msg: string, data?: unknown): void;
 
    /**
     * Log a message at the `warn` log level. The logger will only log a message for this
@@ -49,7 +49,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   warn(msg: string, data: unknown): void;
+   warn(msg: string, data?: unknown): void;
 
    /**
     * Log a message at the `error` log level. The logger will only log a message for this
@@ -59,7 +59,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   error(msg: string, data: unknown): void;
+   error(msg: string, data?: unknown): void;
 
    /**
     * Log a message at the `fatal` log level. The logger will always log a message unless
@@ -69,7 +69,7 @@ export interface ILogger {
     * @param data Custom data to add to the log message. Added to the log object under the
     * `data` key.
     */
-   fatal(msg: string, data: unknown): void;
+   fatal(msg: string, data?: unknown): void;
 
    /**
     * Gets the current logging level.
