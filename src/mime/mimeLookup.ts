@@ -1,6 +1,6 @@
 import _ from 'underscore';
 import MimeTypes from './standard.json';
-import { StringMap } from '../utils/common-types';
+import { StringMap } from '@silvermine/toolbox';
 
 const db = _.reduce(MimeTypes, (memo, extensions: string[], type: string): StringMap => {
    _.each(extensions, (ext) => {

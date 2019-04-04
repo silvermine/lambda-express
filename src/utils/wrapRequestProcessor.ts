@@ -1,7 +1,7 @@
 import _ from 'underscore';
 import { AnyRequestProcessor, NextCallback, ErrorHandlingRequestProcessor } from '../interfaces';
 import { Request, Response } from '..';
-import { isPromise } from './common-types';
+import { isPromise } from '@silvermine/toolbox';
 
 function isErrorHandler(rh: AnyRequestProcessor): rh is ErrorHandlingRequestProcessor {
    return rh.length === 4;

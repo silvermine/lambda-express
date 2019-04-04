@@ -2,7 +2,7 @@ import _ from 'underscore';
 import ProcessorChain, { IRequestMatchingProcessorChain } from './ProcessorChain';
 import { ErrorHandlingRequestProcessor, PathParams } from '../interfaces';
 import { Request } from '..';
-import { StringMap } from '../utils/common-types';
+import { StringMap } from '@silvermine/toolbox';
 const pathToRegexp = require('path-to-regexp');
 
 interface PathToRegexpKey {

@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { Request, Application } from '../src';
 import { RequestEvent } from '../src/request-response-types';
 import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
-import { isKeyValueStringObject } from '../src/utils/common-types';
+import { isKeyValueStringObject } from '@silvermine/toolbox';
 import ConsoleLogger from '../src/logging/ConsoleLogger';
 import sinon from 'sinon';
 import { DebugLogObject } from '../src/logging/logging-types';

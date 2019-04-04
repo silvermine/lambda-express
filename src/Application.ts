@@ -1,7 +1,7 @@
 import { Callback, Context } from 'aws-lambda';
 import Router from './Router';
 import { RequestEvent, HandlerContext } from './request-response-types';
-import { StringUnknownMap, Writable } from './utils/common-types';
+import { StringUnknownMap, Writable } from '@silvermine/toolbox';
 import { Request, Response } from '.';
 import _ from 'underscore';
 
