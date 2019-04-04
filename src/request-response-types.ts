@@ -6,7 +6,7 @@ import {
    Context,
    APIGatewayProxyResult,
 } from 'aws-lambda';
-import { StringMap, StringArrayOfStringsMap } from './utils/common-types';
+import { StringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
 
 /* COMBO TYPES */
 

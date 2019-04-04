@@ -5,7 +5,7 @@ import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
 import { NextCallback, IRoute, IRouter } from '../src/interfaces';
 import { expect } from 'chai';
-import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '../src/utils/common-types';
+import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '@silvermine/toolbox';
 
 describe('integration tests', () => {
    let testBody = { a: 'xyz' },

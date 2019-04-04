@@ -4,7 +4,7 @@ import qs from 'qs';
 import cookie from 'cookie';
 import Application from './Application';
 import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSourceType } from './request-response-types';
-import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from './utils/common-types';
+import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from '@silvermine/toolbox';
 import ConsoleLogger from './logging/ConsoleLogger';
 
 export default class Request {

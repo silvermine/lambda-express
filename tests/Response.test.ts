@@ -4,7 +4,7 @@ import { fail } from 'assert';
 import { Request, Response, Application } from '../src';
 import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
 import sinon, { spy, assert, SinonSpy, SinonSandbox, SinonFakeTimers } from 'sinon';
-import { StringArrayOfStringsMap, StringMap } from '../src/utils/common-types';
+import { StringArrayOfStringsMap, StringMap } from '@silvermine/toolbox';
 import { RequestEvent, CookieOpts } from '../src/request-response-types';
 
 // function type used for reusable test extension below

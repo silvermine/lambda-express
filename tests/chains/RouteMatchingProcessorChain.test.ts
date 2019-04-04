@@ -4,7 +4,7 @@ import { apiGatewayRequest, handlerContext } from '../samples';
 import { expect } from 'chai';
 import { RouteMatchingProcessorChain } from '../../src/chains/RouteMatchingProcessorChain';
 import { PathParams } from '../../src/interfaces';
-import { StringMap } from '../../src/utils/common-types';
+import { StringMap } from '@silvermine/toolbox';
 
 class TestRouteMatchingProcessorChain extends RouteMatchingProcessorChain {
    // override protected methods as public for the sake of making them testable
