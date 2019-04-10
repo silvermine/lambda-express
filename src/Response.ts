@@ -28,6 +28,15 @@ export default class Response {
       this._lambdaCallback = cb;
    }
 
+   /**
+    * Expose the body of the response as a read-only property so that it can be used in
+    * places such as after write listeners (for validating or logging the body that was
+    * sent).
+    */
+   public get body(): string {
+      return this._body;
+   }
+
    // METHODS RELATED TO SETTING RESPONSE HEADERS AND CODES THAT DO NOT SEND RESPONSES
 
    /**

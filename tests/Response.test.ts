@@ -589,6 +589,15 @@ describe('Response', () => {
       });
    });
 
+   describe('body property', () => {
+      it('contains what was sent in the response', () => {
+         const resp = new Response(app, new Request(app, apiGatewayRequest(), handlerContext()), spy());
+
+         resp.send({ foo: 'bar' });
+         expect(resp.body).to.eql(JSON.stringify({ foo: 'bar' }));
+      });
+   });
+
    describe('response sending functions', () => {
       let cb: SinonSpy, resp: Response;
 
