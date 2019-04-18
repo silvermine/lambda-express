@@ -28,8 +28,13 @@ export {
    CookieOpts,
    RequestEvent,
    HandlerContext,
+   ResponseResult,
    LambdaEventSourceType,
+   APIGatewayRequestEvent,
    RequestEventRequestContext,
+   APIGatewayEventRequestContext,
+   ApplicationLoadBalancerRequestEvent,
+   ApplicationLoadBalancerEventRequestContext,
 } from './request-response-types';
 
 export {
