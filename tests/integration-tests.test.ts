@@ -467,6 +467,109 @@ describe('integration tests', () => {
          testOutcome('PUT', '/cars/manufacturers/ford', 'update manufacturer ford');
          testOutcome('PUT', '/cars/manufacturers/ford/', 'update manufacturer ford');
       });
+
+   });
+
+   describe('router reuse', () => {
+
+      it('works when a single subrouter is added for two different paths', () => {
+         const router = new Router();
+
+         app.get('/hello/world', (_req: Request, resp: Response): void => {
+            resp.send('hello world!');
+         });
+
+         router.get('/', (_req: Request, resp: Response): void => { resp.send('list cars'); });
+         router.post('/', (_req: Request, resp: Response): void => { resp.send('create a car'); });
+         router.get('/:id', (req: Request, resp: Response): void => { resp.send('get car ' + req.params.id); });
+         router.put('/:id', (req: Request, resp: Response): void => { resp.send('update car ' + req.params.id); });
+
+         app.addSubRouter('/cars', router);
+         app.addSubRouter('/automobiles', router);
+
+         app.get('/*', (_req: Request, resp: Response): void => {
+            resp.send('everything else');
+         });
+
+         testOutcome('GET', '/hello/world', 'hello world!');
+         testOutcome('GET', '/foo', 'everything else');
+
+         testOutcome('GET', '/cars', 'list cars');
+         testOutcome('GET', '/cars/', 'list cars');
+         testOutcome('POST', '/cars', 'create a car');
+         testOutcome('POST', '/cars/', 'create a car');
+
+         testOutcome('GET', '/cars/F-350', 'get car F-350');
+         testOutcome('GET', '/cars/F-350/', 'get car F-350');
+         // This also adds a test for URL decoding parameters:
+         testOutcome('GET', '/cars/awesome%20F-350', 'get car awesome F-350');
+         testOutcome('GET', '/cars/awesome%20F-350/', 'get car awesome F-350');
+         testOutcome('PUT', '/cars/F-350', 'update car F-350');
+         testOutcome('PUT', '/cars/F-350/', 'update car F-350');
+
+         testOutcome('GET', '/automobiles', 'list cars');
+         testOutcome('GET', '/automobiles/', 'list cars');
+         testOutcome('POST', '/automobiles', 'create a car');
+         testOutcome('POST', '/automobiles/', 'create a car');
+
+         testOutcome('GET', '/automobiles/F-350', 'get car F-350');
+         testOutcome('GET', '/automobiles/F-350/', 'get car F-350');
+         // This also adds a test for URL decoding parameters:
+         testOutcome('GET', '/automobiles/awesome%20F-350', 'get car awesome F-350');
+         testOutcome('GET', '/automobiles/awesome%20F-350/', 'get car awesome F-350');
+         testOutcome('PUT', '/automobiles/F-350', 'update car F-350');
+         testOutcome('PUT', '/automobiles/F-350/', 'update car F-350');
+      });
+
+      it('works when a single subrouter is added for the root and a sub-route', () => {
+         const router = new Router();
+
+         app.get('/hello/world', (_req: Request, resp: Response): void => {
+            resp.send('hello world!');
+         });
+
+         router.get('/cars', (_req: Request, resp: Response): void => { resp.send('list cars'); });
+         router.post('/cars', (_req: Request, resp: Response): void => { resp.send('create a car'); });
+         router.get('/cars/:id', (req: Request, resp: Response): void => { resp.send('get car ' + req.params.id); });
+         router.put('/cars/:id', (req: Request, resp: Response): void => { resp.send('update car ' + req.params.id); });
+
+         app.addSubRouter('/', router);
+         app.addSubRouter('/v1', router);
+
+         app.get('/*', (_req: Request, resp: Response): void => {
+            resp.send('everything else');
+         });
+
+         testOutcome('GET', '/hello/world', 'hello world!');
+         testOutcome('GET', '/foo', 'everything else');
+
+         testOutcome('GET', '/cars', 'list cars');
+         testOutcome('GET', '/cars/', 'list cars');
+         testOutcome('POST', '/cars', 'create a car');
+         testOutcome('POST', '/cars/', 'create a car');
+
+         testOutcome('GET', '/cars/F-350', 'get car F-350');
+         testOutcome('GET', '/cars/F-350/', 'get car F-350');
+         // This also adds a test for URL decoding parameters:
+         testOutcome('GET', '/cars/awesome%20F-350', 'get car awesome F-350');
+         testOutcome('GET', '/cars/awesome%20F-350/', 'get car awesome F-350');
+         testOutcome('PUT', '/cars/F-350', 'update car F-350');
+         testOutcome('PUT', '/cars/F-350/', 'update car F-350');
+
+         testOutcome('GET', '/v1/cars', 'list cars');
+         testOutcome('GET', '/v1/cars/', 'list cars');
+         testOutcome('POST', '/v1/cars', 'create a car');
+         testOutcome('POST', '/v1/cars/', 'create a car');
+
+         testOutcome('GET', '/v1/cars/F-350', 'get car F-350');
+         testOutcome('GET', '/v1/cars/F-350/', 'get car F-350');
+         // This also adds a test for URL decoding parameters:
+         testOutcome('GET', '/v1/cars/awesome%20F-350', 'get car awesome F-350');
+         testOutcome('GET', '/v1/cars/awesome%20F-350/', 'get car awesome F-350');
+         testOutcome('PUT', '/v1/cars/F-350', 'update car F-350');
+         testOutcome('PUT', '/v1/cars/F-350/', 'update car F-350');
+      });
+
    });
 
    describe('internal re-routing with `request.url`', () => {
