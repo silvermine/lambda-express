@@ -22,7 +22,7 @@ describe('RouteMatchingProcessorChain', () => {
       const test = (method: string | undefined, routes: PathParams, path: string, expectation: boolean, caseSensitive = false): void => {
          let app = new Application(),
              req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
-             chain = new RouteMatchingProcessorChain([], routes, caseSensitive, method);
+             chain = new RouteMatchingProcessorChain([], routes, method, caseSensitive);
 
          expect(chain.matches(req)).to.eql(expectation);
       };
