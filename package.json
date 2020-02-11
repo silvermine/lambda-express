@@ -7,7 +7,8 @@
    "module": "./dist/esm/index",
    "scripts": {
       "prepare": "grunt build",
-      "test": "check-node-version --npm 6.13.4 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts"
+      "test": "check-node-version --npm 6.13.4 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts",
+      "commitlint": "commitlint --from 86324da"
    },
    "author": "Jeremy Thomerson",
    "license": "MIT",
@@ -20,6 +21,7 @@
    },
    "homepage": "https://github.com/silvermine/lambda-express#readme",
    "devDependencies": {
+      "@commitlint/cli": "8.3.5",
       "@commitlint/travis-cli": "8.3.5",
       "@silvermine/chai-strictly-equal": "1.1.0",
       "@silvermine/eslint-config": "3.0.0-rc.0",
