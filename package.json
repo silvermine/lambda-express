@@ -7,7 +7,7 @@
    "module": "./dist/esm/index",
    "scripts": {
       "prepare": "grunt build",
-      "test": "TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts"
+      "test": "check-node-version --npm 6.13.4 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts"
    },
    "author": "Jeremy Thomerson",
    "license": "MIT",
@@ -19,10 +19,6 @@
       "url": "https://github.com/silvermine/lambda-express/issues"
    },
    "homepage": "https://github.com/silvermine/lambda-express#readme",
-   "engines": {
-      "node": ">=8.10.0",
-      "npm": "6.4.1"
-   },
    "devDependencies": {
       "@commitlint/travis-cli": "7.5.2",
       "@silvermine/chai-strictly-equal": "1.1.0",
@@ -37,6 +33,7 @@
       "@types/sinon": "5.0.5",
       "@types/underscore": "1.8.9",
       "chai": "4.2.0",
+      "check-node-version": "4.0.2",
       "coveralls": "3.0.2",
       "cz-conventional-changelog": "2.1.0",
       "grunt": "1.0.4",
