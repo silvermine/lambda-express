@@ -18,10 +18,10 @@ export const handlerContext = (fillAllFields: boolean = false): Context => {
       functionVersion: '$LATEST',
       awsRequestId: 'ed6cac60-bb31-4c1f-840d-dd34c80eb9a3',
       invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:echo-api-prd-echo',
-      getRemainingTimeInMillis: () => 100,
-      done: () => undefined,
-      fail: () => undefined,
-      succeed: () => undefined,
+      getRemainingTimeInMillis: () => { return 100; },
+      done: () => { return undefined; },
+      fail: () => { return undefined; },
+      succeed: () => { return undefined; },
    };
 
    if (fillAllFields) {

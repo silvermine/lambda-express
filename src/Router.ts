@@ -88,7 +88,7 @@ export default class Router implements IRouter {
       const wrapped: ErrorHandlingRequestProcessor[] = wrapRequestProcessors(_.flatten(processors)),
             isCaseSensitive = this.routerOptions.caseSensitive;
 
-      this._processors.push(new RouteMatchingProcessorChain(wrapped, path, isCaseSensitive, method));
+      this._processors.push(new RouteMatchingProcessorChain(wrapped, path, method, isCaseSensitive));
       return this;
    }
 

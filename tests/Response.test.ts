@@ -725,7 +725,7 @@ describe('Response', () => {
             evt: RequestEvent,
             msg: string | false,
             extender?: Extender,
-            overrides: { queryParamName?: string | false; queryParamValues?: string[]; responseObject?: any } = {},
+            overrides: { queryParamName?: string | false; queryParamValues?: string[]; responseObject?: any } = {}
          ): void => {
             const o = overrides.responseObject || { foo: 'bar' };
 

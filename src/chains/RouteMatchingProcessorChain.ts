@@ -15,7 +15,7 @@ export class RouteMatchingProcessorChain extends ProcessorChain implements IRequ
    private readonly _matcher: RegExp;
    private readonly _paramKeys: PathToRegexpKey[] = [];
 
-   public constructor(subprocessors: ErrorHandlingRequestProcessor[], path: PathParams, caseSensitive: boolean = false, method?: string) {
+   public constructor(subprocessors: ErrorHandlingRequestProcessor[], path: PathParams, method?: string, caseSensitive: boolean = false) {
       super(subprocessors);
       this._method = method;
       this._matcher = pathToRegexp(path, this._paramKeys, { sensitive: caseSensitive });
