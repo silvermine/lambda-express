@@ -35,8 +35,45 @@ familiar will accelerate your development, allowing you to focus on your busines
 
 ## Usage
 
-TODO: fill in details and examples here.
+Here's a simple example to get you up and running quickly (assumes your execution environment is Node 12.x):
 
+`npm i @silvermine/lambda-express`
+
+`npm i -D aws-lambda`
+
+```typescript
+import { Application, Response, Request } from '@silvermine/lambda-express';
+import { RequestEvent } from '@silvermine/lambda-express/dist/types/request-response-types';
+import { NextCallback } from '@silvermine/lambda-express/dist/types/interfaces';
+import { Context, Callback } from 'aws-lambda';
+
+const app = new Application();
+
+app.all('/*', (_request: Request, response: Response, next: NextCallback) => {
+   response.set('Access-Control-Allow-Origin', '*');
+   next();
+});
+
+app.options('/*', (_request: Request, response: Response) => {
+   response.set('Access-Control-Allow-Methods', 'OPTIONS,GET')
+      .set('Access-Control-Allow-Credentials', 'false');
+   response.send('');
+});
+
+app.get('/my-endpoint', async (request: Request, response: Response) => {
+   response.send('Hello world!');
+});
+
+export const handler = (event: RequestEvent, context: Context, callback: Callback): void => {
+   app.run(event, context, callback);
+};
+
+export default handler;
+```
+
+At this point you should be able to compile, bundle, and deploy this Lambda.
+Assuming you have configured APIGW or ALB to forward traffic to your Lambda,
+you will now have a very basic working API!
 
 ## License
 
