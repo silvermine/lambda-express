@@ -2,14 +2,22 @@ import _ from 'underscore';
 import { expect } from 'chai';
 import { Request, Application } from '../src';
 import { RequestEvent } from '../src/request-response-types';
-import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
+import {
+   apiGatewayRequest,
+   handlerContext,
+   albRequest,
+   albMultiValHeadersRequest,
+   albRequestRawQuery,
+   apiGatewayRequestRawQuery,
+   albMultiValHeadersRawQuery,
+} from './samples';
 import { isKeyValueStringObject } from '@silvermine/toolbox';
 import ConsoleLogger from '../src/logging/ConsoleLogger';
 import sinon from 'sinon';
 import { DebugLogObject } from '../src/logging/logging-types';
 
 describe('Request', () => {
-   let app: Application, allRequestTypes: Request[], allEventTypes: RequestEvent[];
+   let app: Application, allRequestTypes: Request[], allEventTypes: RequestEvent[], rawQueries: string[];
 
    beforeEach(() => {
       app = new Application();
@@ -19,6 +27,12 @@ describe('Request', () => {
          new Request(app, albRequest(), handlerContext()),
          new Request(app, albMultiValHeadersRequest(), handlerContext()),
       ];
+      rawQueries = [
+         apiGatewayRequestRawQuery,
+         albRequestRawQuery,
+         albMultiValHeadersRawQuery,
+      ];
+
    });
 
    describe('constructor', () => {
@@ -43,9 +57,9 @@ describe('Request', () => {
          const event = albRequest(),
                request = new Request(app, event, handlerContext());
 
-         expect(request.url).to.strictlyEqual(event.path);
+         expect(request.url).to.strictlyEqual(event.path + albRequestRawQuery);
          expect(request.path).to.strictlyEqual(event.path);
-         expect(request.originalUrl).to.strictlyEqual(event.path);
+         expect(request.originalUrl).to.strictlyEqual(event.path + albRequestRawQuery);
       });
 
       it('sets URL related fields correctly, when created from a parent request', () => {
@@ -58,11 +72,12 @@ describe('Request', () => {
          parentRequest = new Request(app, event, handlerContext());
          request = new Request(app, parentRequest, handlerContext(), '/a/b');
 
-         expect(request.url).to.strictlyEqual('/c');
+         expect(request.url).to.strictlyEqual(`/c${albRequestRawQuery}`);
          expect(request.path).to.strictlyEqual('/c');
          expect(request.baseUrl).to.strictlyEqual('/a/b');
-         expect(request.originalUrl).to.strictlyEqual(event.path);
-         expect(request.originalUrl).to.strictlyEqual(parentRequest.url);
+         expect(parentRequest.url).to.strictlyEqual(`${event.path}${albRequestRawQuery}`);
+         expect(request.originalUrl).to.strictlyEqual(`${event.path}${albRequestRawQuery}`);
+         expect(request.originalUrl).to.strictlyEqual(`${parentRequest.url}`);
       });
 
    });
@@ -70,13 +85,14 @@ describe('Request', () => {
    describe('makeSubRequest', () => {
 
       it('sets URL related fields correctly', () => {
-         _.each(allRequestTypes, (req) => {
-            const sub = req.makeSubRequest('/echo');
+         _.each(allRequestTypes, (req, i) => {
+            const sub = req.makeSubRequest('/echo'),
+                  query = rawQueries[i];
 
             expect(sub.baseUrl).to.eql('/echo');
-            expect(sub.originalUrl).to.eql('/echo/asdf/a');
+            expect(sub.originalUrl).to.eql(`/echo/asdf/a${query}`);
             expect(sub.path).to.eql('/asdf/a');
-            expect(sub.url).to.eql('/asdf/a');
+            expect(sub.url).to.eql(`/asdf/a${query}`);
          });
       });
 
@@ -551,15 +567,15 @@ describe('Request', () => {
 
          expect(subSubReq.url).to.strictlyEqual('/new');
          expect(subSubReq.baseUrl).to.strictlyEqual('/path/path');
-         expect(subSubReq.originalUrl).to.strictlyEqual('/path/path/old');
+         expect(subSubReq.originalUrl).to.strictlyEqual(`/path/path/old${apiGatewayRequestRawQuery}`);
 
          expect(subReq.url).to.strictlyEqual('/path/new');
          expect(subReq.baseUrl).to.strictlyEqual('/path');
-         expect(subReq.originalUrl).to.strictlyEqual('/path/path/old');
+         expect(subReq.originalUrl).to.strictlyEqual(`/path/path/old${apiGatewayRequestRawQuery}`);
 
          expect(req.url).to.strictlyEqual('/path/path/new');
          expect(req.baseUrl).to.strictlyEqual('');
-         expect(req.originalUrl).to.strictlyEqual('/path/path/old');
+         expect(req.originalUrl).to.strictlyEqual(`/path/path/old${apiGatewayRequestRawQuery}`);
       });
 
    });

@@ -81,6 +81,8 @@ export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {
    };
 };
 
+export const apiGatewayRequestRawQuery = '?&foo[a]=bar%20b&foo[a]=baz%20c&x=1&x=2&y=z';
+
 export const apiGatewayRequest = (): APIGatewayRequestEvent => {
    return {
       body: null,
@@ -161,6 +163,8 @@ const albRequestBase = (): ApplicationLoadBalancerRequestEvent => {
    };
 };
 
+export const albRequestRawQuery = '?&foo%5Ba%5D=baz%20c&x=2&y=z';
+
 export const albRequest = (): ApplicationLoadBalancerRequestEvent => {
    return _.extend({}, albRequestBase(), {
       queryStringParameters: {
@@ -184,10 +188,12 @@ export const albRequest = (): ApplicationLoadBalancerRequestEvent => {
    });
 };
 
+export const albMultiValHeadersRawQuery = '?&foo%5Ba%5D=bar%20b&foo%5Ba%5D=baz%20c&x=1&x=2&y=z';
+
 export const albMultiValHeadersRequest = (): ApplicationLoadBalancerRequestEvent => {
    return _.extend({}, albRequestBase(), {
       multiValueQueryStringParameters: {
-         'foo%5Ba%5D': [ 'bar%20b', 'baz%20c' ],
+         'foo%5Ba%5D': [ 'bar%20b', 'baz c' ],
          x: [ '1', '2' ],
          y: [ 'z' ],
       },
