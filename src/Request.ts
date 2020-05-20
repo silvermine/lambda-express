@@ -229,17 +229,32 @@ export default class Request {
    public constructor(app: Application, eventOrRequest: RequestEvent | Request, context: HandlerContext,
       baseURL: string = '', params: StringMap = {}) {
       let event: RequestEvent,
-          path: string;
+          url: string,
+          originalURL: string,
+          query: KeyValueStringObject;
 
       if (eventOrRequest instanceof Request) {
          // Make this request a sub-request of the request passed into the constructor
          this._parentRequest = eventOrRequest;
-         path = this._parentRequest.path.substring(baseURL.length);
+         url = this._parentRequest.url.substring(baseURL.length);
          baseURL = this._parentRequest.baseUrl + baseURL;
          event = this._parentRequest._event;
+         originalURL = this._parentRequest.originalUrl;
+         query = this._parentRequest.query;
       } else {
          event = eventOrRequest;
-         path = event.path;
+
+         const parsedQuery = this._parseQuery(event.multiValueQueryStringParameters || {}, event.queryStringParameters || {});
+
+         // Despite the fact that the Express docs say that the `originalUrl` is `baseUrl
+         // + path`, it's actually always equal to the original URL that initiated the
+         // request. If, for example, a route handler changes the `url` of a request, the
+         // `path` is changed too, *but* `originalUrl` stays the same. This would not be
+         // the case if `originalUrl = `baseUrl + path`. See the documentation on the
+         // `url` getter for more details.
+         url = `${event.path}?${parsedQuery.raw}`;
+         originalURL = url;
+         query = parsedQuery.parsed;
       }
 
       this.app = app;
@@ -258,20 +273,15 @@ export default class Request {
       this.hostname = this._parseHostname();
       this.ip = this._parseIP();
       this.protocol = this._parseProtocol();
-      this.query = this._parseQuery(event.multiValueQueryStringParameters || {}, event.queryStringParameters || {});
+      this.query = query;
       this.secure = (this.protocol === 'https');
       this.xhr = (this.get('x-requested-with') === 'XMLHttpRequest');
 
       // Fields related to routing:
       this.baseUrl = baseURL;
-      this._path = this._url = path;
-      // Despite the fact that the Express docs say that the `originalUrl` is `baseUrl +
-      // path`, it's actually always equal to the original URL that initiated the request.
-      // If, for example, a route handler changes the `url` of a request, the `path` is
-      // changed too, *but* `originalUrl` stays the same. This would not be the case if
-      // `originalUrl = `baseUrl + path`. See the documentation on the `url` getter for
-      // more details.
-      this.originalUrl = event.path;
+      this._url = url;
+      this._path = url.split('?')[0];
+      this.originalUrl = originalURL;
       this.params = Object.freeze(params);
 
       if (this._parentRequest) {
@@ -289,13 +299,14 @@ export default class Request {
    /** PUBLIC PROPERTIES: GETTERS AND SETTERS */
 
    /**
-    * `req.url` is the same as `req.path` in most cases.
+    * `req.url` is the same as `req.path` in most cases, except that `req.url` includes
+    * query string on it.
     *
     * However, route handlers and other middleware may change the value of `req.url` to
     * redirect the request to other registered middleware. For example:
     *
     * ```
-    * // GET example.com/admin/users/1337
+    * // GET example.com/admin/users/1337?a=b&c=d
     *
     * const router1 = new express.Router(),
     *       router2 = new express.Router();
@@ -305,17 +316,18 @@ export default class Request {
     *    if (req.params.userID === authenticatedUser.id) {
     *       // User ID is the same as the authenticated user's. Re-route to user profile
     *       // handler:
-    *       req.url = '/profile';
+    *       req.url = '/profile?me=true';
     *       return next();
     *    }
     *    // ...
     * });
     *
     * router2.get('/profile', function(req, res) {
-    *    console.log(req.originalUrl); // '/admin/users/1337'
+    *    console.log(req.originalUrl); // '/admin/users/1337?a=b&c=d'
     *    console.log(req.baseUrl); // '/admin'
     *    console.log(req.path); // '/profile'
-    *    console.log(req.url); // '/profile'
+    *    console.log(req.url); // '/profile?me=true'
+    *    console.log(req.query); // { a: 'b', c: 'd' }
     *    // ...
     * });
     *
@@ -323,11 +335,11 @@ export default class Request {
     * app.addSubRouter('/admin', router2);
     * ```
     *
-    * In the example above, the `GET` request to `/admin/users/1337` is re-routed to the
-    * `/profile` handler in `router2`. Any other route handlers on `router1` that would
-    * have handled the `/users/1337` route are skiped. Also, notice that `req.url` keeps
-    * the value given to it by `router1`'s route handler, but `req.originalUrl` stays the
-    * same.
+    * In the example above, the `GET` request to `/admin/users/1337?a=b&c=d` is re-routed
+    * to the `/profile` handler in `router2`. Any other route handlers on `router1` that
+    * would have handled the `/users/1337` route are skipped. Also, notice that `req.url`
+    * keeps the value given to it by `router1`'s route handler, but `req.originalUrl`
+    * stays the same.
     *
     * If the route handler or middleware that changes `req.url` adds a query string to
     * `req.url`, the query string is retained on the `req.url` property but the query
@@ -526,23 +538,30 @@ export default class Request {
       }
    }
 
-   private _parseQuery(multiValQuery: StringArrayOfStringsMap, query: StringMap): KeyValueStringObject {
+   private _parseQuery(multiValQuery: StringArrayOfStringsMap, query: StringMap): { raw: string; parsed: KeyValueStringObject } {
       let queryString;
 
+      // It may seem strange to encode the URI components immediately after decoding them.
+      // But, this allows us to take values that are encoded and those that are not, then
+      // decode them to make sure we know they're not encoded, and then encode them so
+      // that we make an accurate raw query string to set on the URL parts of the request.
+      // If we simply encoded them, and we received a value that was still encoded
+      // already, then we would encode the `%` signs, etc, and end up with double-encoded
+      // values that were not correct.
       if (_.isEmpty(multiValQuery)) {
          queryString = _.reduce(query, (memo, v, k) => {
-            return memo + `&${k}=${v}`;
+            return memo + `&${k}=${encodeURIComponent(decodeURIComponent(v))}`;
          }, '');
       } else {
          queryString = _.reduce(multiValQuery, (memo, vals, k) => {
             _.each(vals, (v) => {
-               memo += `&${k}=${v}`;
+               memo += `&${k}=${encodeURIComponent(decodeURIComponent(v))}`;
             });
             return memo;
          }, '');
       }
 
-      return qs.parse(queryString);
+      return { raw: queryString, parsed: qs.parse(queryString) };
    }
 
    private _getHeaderKey(headerName: string): string {

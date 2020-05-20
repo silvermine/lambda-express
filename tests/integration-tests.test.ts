@@ -1,5 +1,11 @@
 import _ from 'underscore';
-import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
+import {
+   apiGatewayRequest,
+   handlerContext,
+   albRequest,
+   albMultiValHeadersRequest,
+   apiGatewayRequestRawQuery,
+} from './samples';
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
@@ -578,13 +584,13 @@ describe('integration tests', () => {
       function testRoutesWithRedirect(changeReqFn = (req: Request) => { req.url = '/goodbye'; }, expectedResponse: string = 'goodbye') {
          const router = new Router();
 
-         let reqProps = [ 'url', 'path', 'query' ],
+         let reqProps = [ 'url', 'path', 'query', 'originalUrl' ],
              helloRouteHandler: SinonSpy,
              helloRouteHandler2: SinonSpy,
              goodbyeRouteHandler: SinonSpy,
-             helloReq: { url: string; path: string; query: KeyValueStringObject },
-             hello2Req: { url: string; path: string; query: KeyValueStringObject },
-             goodbyeReq: { url: string; path: string; query: KeyValueStringObject };
+             helloReq: { url: string; path: string; query: KeyValueStringObject; originalUrl: string },
+             hello2Req: { url: string; path: string; query: KeyValueStringObject; originalUrl: string },
+             goodbyeReq: { url: string; path: string; query: KeyValueStringObject; originalUrl: string };
 
          helloRouteHandler = spy((req: Request, _resp: Response, next: NextCallback): void => {
             helloReq = _.pick(req, ...reqProps);
@@ -672,12 +678,18 @@ describe('integration tests', () => {
       it('ignores query string params when `request.url` changes to a URL with query params', () => {
          const handlers = testRoutesWithRedirect((req: Request) => { req.url = '/goodbye?to=you'; });
 
-         expect(handlers.getHelloReq().url).to.strictlyEqual('/hello');
-         // Expect that the query parameters were stripped from the URL
-         expect(handlers.getGoodbyeReq().url).to.strictlyEqual('/goodbye');
+         expect(handlers.getHelloReq().url).to.strictlyEqual(`/hello${apiGatewayRequestRawQuery}`);
+         expect(handlers.getHelloReq().originalUrl).to.strictlyEqual(`/path/hello${apiGatewayRequestRawQuery}`);
+         // Express has some interesting behavior here. The URL is changed. But the query
+         // string parameters are not reparsed. So, we should see the URL have the new
+         // query parameters, but the query object itself still have the old values.
+         expect(handlers.getGoodbyeReq().url).to.strictlyEqual('/goodbye?to=you');
+         expect(handlers.getGoodbyeReq().originalUrl).to.strictlyEqual(`/path/hello${apiGatewayRequestRawQuery}`);
 
          // Expect that the query parameter `to` was ignored
          expect(handlers.getGoodbyeReq().query.to).to.strictlyEqual(undefined);
+         // And that the old parameters are still available
+         expect(handlers.getGoodbyeReq().query.y).to.strictlyEqual('z');
       });
 
       it('updates path params when `request.url` changes to a URL with different path params', () => {
