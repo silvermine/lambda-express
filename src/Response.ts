@@ -6,6 +6,7 @@ import { CookieOpts, ResponseResult } from './request-response-types';
 import { StatusCodes } from './status-codes';
 import { Callback } from 'aws-lambda';
 import mimeLookup from './mime/mimeLookup';
+import { isUndefined } from 'util';
 
 export default class Response {
 
@@ -288,16 +289,25 @@ export default class Response {
     * Sets the appropriate caching headers (`Expires`, `Cache-Control`, and `Pragma`) to
     * cache content for a specific number of seconds. If zero or any negative number of
     * seconds is passed in, the headers are set to disallow caching.
+    *
+    * Optionally, you can set a value for the `s-maxage` directive used by "shared caches"
+    * by providing the `sharedCacheSeconds` value.
     */
-   public cacheForSeconds(seconds: number): Response {
+   public cacheForSeconds(seconds: number, sharedCacheSeconds?: number): Response {
       const now = new Date(),
             expiry = new Date(now.getTime() + (seconds * 1000));
 
       if (seconds > 0) {
+         let cc = `must-revalidate, max-age=${seconds}`;
+
+         if (!isUndefined(sharedCacheSeconds)) {
+            cc = `${cc}, s-maxage=${sharedCacheSeconds}`;
+         }
+
          this.delete('Pragma');
          this.set({
             'Expires': expiry.toUTCString(),
-            'Cache-Control': `must-revalidate, max-age=${seconds}`,
+            'Cache-Control': cc,
          });
       } else {
          this.set({
@@ -314,8 +324,8 @@ export default class Response {
     * easier-to-read code by allowing the developer to express the number of minutes
     * without having to do multiplication (or division when you read the code.)
     */
-   public cacheForMinutes(minutes: number): Response {
-      return this.cacheForSeconds(minutes * 60);
+   public cacheForMinutes(minutes: number, sharedCacheMinutes?: number): Response {
+      return this.cacheForSeconds(minutes * 60, isUndefined(sharedCacheMinutes) ? undefined : sharedCacheMinutes * 60);
    }
 
    /**
@@ -323,8 +333,8 @@ export default class Response {
     * easier-to-read code by allowing the developer to express the number of hours without
     * having to do multiplication (or division when you read the code.)
     */
-   public cacheForHours(hours: number): Response {
-      return this.cacheForMinutes(hours * 60);
+   public cacheForHours(hours: number, sharedCacheHours?: number): Response {
+      return this.cacheForMinutes(hours * 60, isUndefined(sharedCacheHours) ? undefined : sharedCacheHours * 60);
    }
 
    // METHODS RELATED TO SENDING RESPONSES
