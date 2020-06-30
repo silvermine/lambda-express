@@ -69,6 +69,17 @@ describe('RouteMatchingProcessorChain', () => {
          test(undefined, /\/user\/[0-9]+/, '/USER/1234', false, true);
       });
 
+      it('allows for custom regexp patterns in paths', () => {
+         // https://github.com/pillarjs/path-to-regexp#custom-matching-parameters
+         const PATTERN = '/:prefix(([A-Z]{1,3}-)?)users/:id';
+
+         test('GET', PATTERN, '/ABC-users/1234', true);
+         test('GET', PATTERN, '/AB-users/1234', true);
+         test('GET', PATTERN, '/A-users/1234', true);
+         test('GET', PATTERN, '/users/1234', true);
+         test('GET', PATTERN, '/ABCD-users/1234', false);
+      });
+
    });
 
    const makePathAndParamsTests = (test: (routes: PathParams, path: string, expectation: StringMap) => void): () => void => {
