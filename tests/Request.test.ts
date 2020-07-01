@@ -208,31 +208,99 @@ describe('Request', () => {
 
    describe('hostname property', () => {
 
-      it('parses correctly', () => {
-         let evt: RequestEvent = apiGatewayRequest(),
-             req;
+      const testCases = [
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            expectedWithTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443',
+            expectedWithTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            xForwardedHost: 'api.example.com',
+            expectedWithTrustProxy: 'api.example.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443',
+            xForwardedHost: 'api.example.com',
+            expectedWithTrustProxy: 'api.example.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            xForwardedHost: 'api.example.com:433',
+            expectedWithTrustProxy: 'api.example.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+         {
+            host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443',
+            xForwardedHost: 'api.example.com:443',
+            expectedWithTrustProxy: 'api.example.com',
+            expectedWithoutTrustProxy: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         },
+      ];
 
-         evt.headers.Host = 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443';
-         req = new Request(app, evt, handlerContext());
-         expect(req.hostname).to.eql('b5gee6dacf.execute-api.us-east-1.amazonaws.com');
+      it('parses proper values - APIGW', () => {
+         _.each(testCases, (testCase) => {
+            let evt: RequestEvent = apiGatewayRequest(),
+                req;
 
-         evt.headers.Host = 'b5gee6dacf.execute-api.us-east-1.amazonaws.com';
-         req = new Request(app, evt, handlerContext());
-         expect(req.hostname).to.eql('b5gee6dacf.execute-api.us-east-1.amazonaws.com');
+            evt.headers.Host = testCase.host;
 
-         evt = albRequest();
-         if (evt.headers) {
-            evt.headers.host = 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443';
-         }
-         req = new Request(app, evt, handlerContext());
-         expect(req.hostname).to.eql('b5gee6dacf.execute-api.us-east-1.amazonaws.com');
+            if (testCase.xForwardedHost) {
+               evt.headers['X-Forwarded-Host'] = testCase.xForwardedHost;
+               evt.multiValueHeaders['X-Forwarded-Host'] = [ testCase.xForwardedHost ];
+            } else {
+               delete evt.headers['X-Forwarded-Host'];
+               delete evt.multiValueHeaders['X-Forwarded-Host'];
+            }
 
-         evt = albMultiValHeadersRequest();
-         if (evt.multiValueHeaders) {
-            evt.multiValueHeaders.host = [ 'b5gee6dacf.execute-api.us-east-1.amazonaws.com:443' ];
-         }
-         req = new Request(app, evt, handlerContext());
-         expect(req.hostname).to.eql('b5gee6dacf.execute-api.us-east-1.amazonaws.com');
+            app.enable('trust proxy');
+            req = new Request(app, evt, handlerContext());
+            expect(req.hostname).to.eql(testCase.expectedWithTrustProxy);
+
+            app.disable('trust proxy');
+            req = new Request(app, evt, handlerContext());
+            expect(req.hostname).to.eql(testCase.expectedWithoutTrustProxy);
+         });
+      });
+
+      it('parses proper values - ALB', () => {
+         _.each(testCases, (testCase) => {
+            let req;
+
+            _.each([ albRequest(), albMultiValHeadersRequest() ], (evt) => {
+               if (evt.headers) {
+                  evt.headers.host = testCase.host;
+                  if (testCase.xForwardedHost) {
+                     evt.headers['X-Forwarded-Host'] = testCase.xForwardedHost;
+                  } else {
+                     delete evt.headers['X-Forwarded-Host'];
+                  }
+               }
+               if (evt.multiValueHeaders) {
+                  evt.multiValueHeaders.host = [ testCase.host ];
+                  if (testCase.xForwardedHost) {
+                     evt.multiValueHeaders['X-Forwarded-Host'] = [ testCase.xForwardedHost ];
+                  } else {
+                     delete evt.multiValueHeaders['X-Forwarded-Host'];
+                  }
+               }
+
+               app.enable('trust proxy');
+               req = new Request(app, evt, handlerContext());
+               expect(req.hostname).to.eql(testCase.expectedWithTrustProxy);
+
+               app.disable('trust proxy');
+               req = new Request(app, evt, handlerContext());
+               expect(req.hostname).to.eql(testCase.expectedWithoutTrustProxy);
+            });
+         });
       });
 
    });
