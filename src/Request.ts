@@ -507,7 +507,13 @@ export default class Request {
    }
 
    private _parseHostname(): string | undefined {
-      const host = (this.get('host') || '').replace(/:[0-9]*$/, '');
+      let host = (this.get('host') || '');
+
+      if (this.app.isEnabled('trust proxy')) {
+         host = this.get('x-forwarded-host') || host;
+      }
+
+      host = host.replace(/:[0-9]*$/, '');
 
       return _.isEmpty(host) ? undefined : host;
    }
