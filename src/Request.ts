@@ -7,6 +7,14 @@ import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSo
 import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from '@silvermine/toolbox';
 import ConsoleLogger from './logging/ConsoleLogger';
 
+function safeDecode(s: string): string {
+   try {
+      return decodeURIComponent(s);
+   } catch(err) {
+      return '';
+   }
+}
+
 export default class Request {
 
    public static readonly SOURCE_ALB: LambdaEventSourceType = 'ALB';
@@ -556,12 +564,12 @@ export default class Request {
       // values that were not correct.
       if (_.isEmpty(multiValQuery)) {
          queryString = _.reduce(query, (memo, v, k) => {
-            return memo + `&${k}=${encodeURIComponent(decodeURIComponent(v))}`;
+            return memo + `&${k}=${encodeURIComponent(safeDecode(v))}`;
          }, '');
       } else {
          queryString = _.reduce(multiValQuery, (memo, vals, k) => {
             _.each(vals, (v) => {
-               memo += `&${k}=${encodeURIComponent(decodeURIComponent(v))}`;
+               memo += `&${k}=${encodeURIComponent(safeDecode(v))}`;
             });
             return memo;
          }, '');

@@ -505,6 +505,27 @@ describe('Request', () => {
          test(albMultiValHeadersRequest(), [ 'bar b', 'baz c' ]);
       });
 
+      it('does not throw an error when bad values supplied', () => {
+         const apigwReq = apiGatewayRequest();
+
+         // Simulate a bad value (from an injection attack) being supplied
+         apigwReq.queryStringParameters = {
+            user: '5%\';SELECT DBMS_PIPE.RECEIVE_MESSAGE(CHR(83)||CHR(115)||CHR(78)||CHR(119),5) FROM DUAL--',
+            'foo[a]': 'bar b',
+         };
+         apigwReq.multiValueQueryStringParameters = {
+            user: [ '5%\';SELECT DBMS_PIPE.RECEIVE_MESSAGE(CHR(83)||CHR(115)||CHR(78)||CHR(119),5) FROM DUAL--' ],
+            'foo[a]': [ 'bar b', 'baz c' ],
+         };
+
+         const req = new Request(app, apigwReq, handlerContext());
+
+         expect(req.query).to.eql({
+            foo: { a: [ 'bar b', 'baz c' ] },
+            user: '',
+         });
+      });
+
       it('only contains the expected data', () => {
          let req = new Request(app, apiGatewayRequest(), handlerContext());
 
