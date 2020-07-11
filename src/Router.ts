@@ -123,7 +123,8 @@ export default class Router implements IRouter {
     * Express-standard routing method for `GET` requests.
     */
    public get(path: PathParams, ...processors: ProcessorOrProcessors[]): this {
-      return this.mount('GET', path, ...processors);
+      return this.mount('GET', path, ...processors)
+         .mount('HEAD', path, ...processors);
    }
 
    /**

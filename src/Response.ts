@@ -408,7 +408,7 @@ export default class Response {
          isBase64Encoded: false,
          statusCode: this._statusCode,
          multiValueHeaders: { ...this._headers },
-         body: this._body,
+         body: this._request.method === 'HEAD' ? '' : this._body,
       };
 
       if (this.isALB()) {

@@ -393,6 +393,12 @@ describe('integration tests', () => {
          });
       });
 
+      addTestsForMethod('HEAD', 200, '200 OK', 'ETag', '3cef25cd', '', () => {
+         app.get('/hello/world', (_req: Request, resp: Response) => {
+            resp.append('ETag', '3cef25cd').status(200).json(testBody);
+         });
+      }, 'application/json; charset=utf-8');
+
       addTestsForMethod('PUT', 200, '200 OK', 'ETag', '3cef25cd', JSON.stringify(testBody), () => {
          app.put('/hello/world', (_req: Request, resp: Response) => {
             resp.append('ETag', '3cef25cd').send(testBody);
@@ -837,7 +843,9 @@ describe('integration tests', () => {
          // Both a path with and without a trailing slash should match
          _.each([ '/test', '/test/' ], (path) => {
             _.each(methods, (method) => {
-               testOutcome(method.toUpperCase(), path, `Test ${method}`);
+               const expectedBody = (method === 'head' ? '' : `Test ${method}`);
+
+               testOutcome(method.toUpperCase(), path, expectedBody);
 
                // Check that the "all" handler was called
                assert.calledOnce(allHandler);
