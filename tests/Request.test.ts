@@ -505,6 +505,34 @@ describe('Request', () => {
          test(albMultiValHeadersRequest(), [ 'bar b', 'baz c' ]);
       });
 
+      it('correctly decodes query string parameters', () => {
+         _.each(allEventTypes, (event) => {
+            const partiallyEncoded = { a: 'b+c', d: 'e%20f', g: 'h i' },
+                  expected = { a: 'b c', d: 'e f', g: 'h i' };
+
+            event.multiValueQueryStringParameters = {};
+            event.queryStringParameters = partiallyEncoded;
+
+            const req = new Request(app, event, handlerContext());
+
+            expect(req.query).to.eql(expected);
+         });
+      });
+
+      it('correctly decodes multi value query string parameters', () => {
+         _.each(allEventTypes, (event) => {
+            const partiallyEncoded = { a: [ 'b+c', 'e%20f', 'h i' ] },
+                  expected = { a: [ 'b c', 'e f', 'h i' ] };
+
+            event.multiValueQueryStringParameters = partiallyEncoded;
+            event.queryStringParameters = {};
+
+            const req = new Request(app, event, handlerContext());
+
+            expect(req.query).to.eql(expected);
+         });
+      });
+
       it('does not throw an error when bad values supplied', () => {
          const apigwReq = apiGatewayRequest();
 
