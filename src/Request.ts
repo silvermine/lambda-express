@@ -9,7 +9,9 @@ import ConsoleLogger from './logging/ConsoleLogger';
 
 function safeDecode(s: string): string {
    try {
-      return decodeURIComponent(s);
+      // decodeURIComponent does not handle +'s as you might expect
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent#Decoding_query_parameters_from_a_URL
+      return decodeURIComponent(s.replace(/\+/g, ' '));
    } catch(err) {
       return '';
    }
