@@ -437,6 +437,8 @@ describe('integration tests', () => {
          r2.post('/', (_req: Request, resp: Response): void => { resp.send('create a manufacturer'); });
          r2.get('/:id', (req: Request, resp: Response): void => { resp.send('get manufacturer ' + req.params.id); });
          r2.put('/:id', (req: Request, resp: Response): void => { resp.send('update manufacturer ' + req.params.id); });
+         r2.get('/:id/styles', (req: Request, resp: Response): void => { resp.send('list styles for ' + req.params.id); });
+         r2.get('/:id/:style', (req: Request, resp: Response): void => { resp.send(`${req.params.id} style ${req.params.style}`); });
 
          app.addSubRouter('/cars', r1);
 
@@ -472,6 +474,10 @@ describe('integration tests', () => {
          testOutcome('GET', '/cars/manufacturers/awesome%20ford/', 'get manufacturer awesome ford');
          testOutcome('PUT', '/cars/manufacturers/ford', 'update manufacturer ford');
          testOutcome('PUT', '/cars/manufacturers/ford/', 'update manufacturer ford');
+
+         // Multiple parameters and static part after parameter part:
+         testOutcome('GET', '/cars/manufacturers/ford/styles', 'list styles for ford');
+         testOutcome('GET', '/cars/manufacturers/ford/big-one', 'ford style big-one');
       });
 
    });
