@@ -54,7 +54,7 @@
       "typescript": "3.2.2"
    },
    "dependencies": {
-      "@silvermine/toolbox": "git+https://github.com/silvermine/toolbox.git#1761c9bf606d8404188a703f8caf433a5663367d",
+      "@silvermine/toolbox": "0.1.0",
       "cookie": "0.3.1",
       "path-to-regexp": "0.1.7",
       "qs": "6.6.0",
