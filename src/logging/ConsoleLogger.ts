@@ -60,9 +60,11 @@ export default class ConsoleLogger implements ILogger {
     * Perform the actual message logging
     */
    protected _log(level: LogLevel, msg: string, data?: unknown): void {
-      if (this._shouldLog(level)) {
+      if (this._shouldLog(level) && level !== 'silent') {
+         const method = level === 'fatal' ? 'error' : level;
+
          // eslint-disable-next-line no-console
-         console.log(JSON.stringify(this._makeLogObject(level, msg, data)));
+         console[method](JSON.stringify(this._makeLogObject(level, msg, data)));
       }
    }
 

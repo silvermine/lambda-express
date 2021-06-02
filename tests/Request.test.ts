@@ -700,7 +700,7 @@ describe('Request', () => {
    describe('`log` property', () => {
 
       function testLog(req: Request): void {
-         let consoleSpy = sinon.spy(console, 'log'),
+         let debugLogSpy = sinon.spy(console, 'debug'),
              logLine: DebugLogObject;
 
          expect(req.log).to.be.an.instanceOf(ConsoleLogger);
@@ -709,15 +709,15 @@ describe('Request', () => {
          req.log.setLevel('debug');
          req.log.debug('test', { test: true });
 
-         sinon.assert.calledOnce(consoleSpy);
+         sinon.assert.calledOnce(debugLogSpy);
 
-         logLine = JSON.parse(consoleSpy.firstCall.args[0]);
+         logLine = JSON.parse(debugLogSpy.firstCall.args[0]);
          expect(logLine.msg).to.strictlyEqual('test');
          expect(logLine.data).to.eql({ test: true });
          expect(logLine.remaining).to.be.a('number');
          expect(logLine.timer).to.be.a('number');
 
-         consoleSpy.restore();
+         debugLogSpy.restore();
       }
 
       it('exists and logs messages', () => {

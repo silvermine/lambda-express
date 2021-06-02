@@ -18,14 +18,32 @@ describe('ConsoleLogger', () => {
       getTimeUntilFnTimeout: () => { return 0; },
    };
 
-   let logSpy: SinonSpy;
+   interface Spies {
+      log: SinonSpy;
+      trace: SinonSpy;
+      debug: SinonSpy;
+      info: SinonSpy;
+      warn: SinonSpy;
+      error: SinonSpy;
+   }
+
+   let spies: Spies;
 
    beforeEach(function() {
-      logSpy = sinon.spy(console, 'log');
+      spies = {
+         log: sinon.spy(console, 'log'),
+         trace: sinon.spy(console, 'trace'),
+         debug: sinon.spy(console, 'debug'),
+         info: sinon.spy(console, 'info'),
+         warn: sinon.spy(console, 'warn'),
+         error: sinon.spy(console, 'error'),
+      };
    });
 
    afterEach(function() {
-      logSpy.restore();
+      Object.keys(spies).forEach((k) => {
+         spies[k as keyof Spies].restore();
+      });
    });
 
    describe('constructor', () => {
@@ -51,12 +69,20 @@ describe('ConsoleLogger', () => {
       return new ConsoleLogger(_.extend({}, DEFAULT_LOGGER_CONFIG, { level }));
    }
 
-   function getLogLineAsString(index: number = 0): string {
-      return logSpy.firstCall.args[index];
+   function getLogLineAsString(spy: SinonSpy, index: number = 0): string {
+      return spy.firstCall.args[index];
    }
 
-   function getLogLineAsJSON(index: number = 0): LogObject | DebugLogObject {
-      return JSON.parse(getLogLineAsString(index));
+   function getSpy(level: LogLevel): SinonSpy {
+      switch (level) {
+         case 'silent': { return spies.log; }
+         case 'fatal': { return spies.error; }
+         default: { return spies[level]; }
+      }
+   }
+
+   function getLogLineAsJSON(level: Exclude<LogLevel, 'silent'>, index: number = 0): LogObject | DebugLogObject {
+      return JSON.parse(getLogLineAsString(getSpy(level), index));
    }
 
    function createLoggerAndTest(level: Exclude<LogLevel, 'silent'>): ConsoleLogger {
@@ -68,11 +94,11 @@ describe('ConsoleLogger', () => {
       logger[level](msg, data);
 
       // Expect that we've only logged one message to the console
-      sinon.assert.calledOnce(logSpy);
+      sinon.assert.calledOnce(getSpy(level));
 
-      logLine = getLogLineAsJSON(0);
+      logLine = getLogLineAsJSON(level, 0);
 
-      expect(getLogLineAsString(0)).to.be.a('string');
+      expect(getLogLineAsString(getSpy(level), 0)).to.be.a('string');
       expect(logLine).to.be.an('object');
       expect(logLine.level).to.strictlyEqual(level);
       expect(logLine.msg).to.strictlyEqual(msg);
@@ -108,7 +134,7 @@ describe('ConsoleLogger', () => {
 
                logger[level]('test');
 
-               sinon.assert.notCalled(logSpy);
+               sinon.assert.notCalled(getSpy(level));
             });
          }
       });
@@ -132,7 +158,9 @@ describe('ConsoleLogger', () => {
             }
          });
 
-         sinon.assert.notCalled(logSpy);
+         Object.keys(spies).forEach((k) => {
+            sinon.assert.notCalled(getSpy(k as LogLevel));
+         });
       });
 
    });
@@ -152,8 +180,10 @@ describe('ConsoleLogger', () => {
       it('allows updating the log level', () => {
          let logger = createLoggerAndTest('info');
 
-         // Reset logSpy's history after createLoggerAndTest's tests
-         logSpy.resetHistory();
+         // Reset spies' history after createLoggerAndTest's tests
+         Object.keys(spies).forEach((k) => {
+            getSpy(k as LogLevel).resetHistory();
+         });
 
          expect(logger.getLevel()).to.strictlyEqual('info');
 
@@ -161,25 +191,35 @@ describe('ConsoleLogger', () => {
 
          expect(logger.getLevel()).to.strictlyEqual('fatal');
 
+         const assertNoneBesidesFatalCalled = (): void => {
+            Object.keys(spies).forEach((k) => {
+               if (k === 'error') {
+                  return;
+               }
+
+               const spy = getSpy(k as LogLevel);
+
+               sinon.assert.notCalled(spy);
+               spy.resetHistory();
+            });
+         };
+
          logger.trace('trace message');
-         sinon.assert.notCalled(logSpy);
-         logSpy.resetHistory();
+         assertNoneBesidesFatalCalled();
 
          logger.debug('debug message');
-         sinon.assert.notCalled(logSpy);
-         logSpy.resetHistory();
+         assertNoneBesidesFatalCalled();
 
          logger.warn('warn message');
-         sinon.assert.notCalled(logSpy);
-         logSpy.resetHistory();
+         assertNoneBesidesFatalCalled();
 
          logger.error('error message');
-         sinon.assert.notCalled(logSpy);
-         logSpy.resetHistory();
+         assertNoneBesidesFatalCalled();
 
          logger.fatal('fatal message');
-         sinon.assert.calledOnce(logSpy);
-         expect(logSpy.firstCall.args[0]).to.be.a('string');
+         assertNoneBesidesFatalCalled();
+         sinon.assert.calledOnce(spies.error);
+         expect(spies.error.firstCall.args[0]).to.be.a('string');
       });
 
    });
