@@ -7,7 +7,7 @@
    "module": "./dist/esm/index",
    "scripts": {
       "prepare": "grunt build",
-      "test": "check-node-version --npm 6.14.12 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts",
+      "test": "check-node-version --npm 6.14.12 && NODE_OPTIONS=--unhandled-rejections=warn TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha --opts ./.mocha.opts",
       "commitlint": "commitlint --from 86324da",
       "release:preview": "node ./node_modules/@silvermine/standardization/scripts/release.js preview",
       "release:prep-changelog": "node ./node_modules/@silvermine/standardization/scripts/release.js prep-changelog",
