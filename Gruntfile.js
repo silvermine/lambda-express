@@ -70,6 +70,15 @@ module.exports = (grunt) => {
          'build-ts-outputs': [ 'build-types', 'build-esm', 'build-commonjs' ],
       },
 
+      markdownlint: {
+         all: {
+            src: [ './README.md' ],
+            options: {
+               config: grunt.file.readJSON('.markdownlint.json'),
+            },
+         },
+      },
+
       watch: {
          ts: {
             files: [ config.ts.src ],
@@ -90,6 +99,7 @@ module.exports = (grunt) => {
    grunt.loadNpmTasks('grunt-contrib-clean');
    grunt.loadNpmTasks('grunt-concurrent');
    grunt.loadNpmTasks('grunt-contrib-watch');
+   grunt.loadNpmTasks('grunt-markdownlint');
 
    grunt.registerTask('standards', [ 'eslint', 'exec:standards' ]);
    grunt.registerTask('default', [ 'standards' ]);

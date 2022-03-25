@@ -1,0 +1,6 @@
+{
+   "bail": true,
+   "full-trace": true,
+   "require": [ "source-map-support/register", "./tests/setup/before.ts" ],
+   "spec": [ "tests/**/*.test.ts" ]
+}
