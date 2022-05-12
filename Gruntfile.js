@@ -20,7 +20,6 @@ module.exports = (grunt) => {
             './tests/**/*.ts',
          ],
          configs: {
-            standards: 'tsconfig.json',
             commonjs: 'src/tsconfig.commonjs.json',
             esm: 'src/tsconfig.esm.json',
             types: 'src/tsconfig.types.json',
@@ -47,9 +46,6 @@ module.exports = (grunt) => {
          options: {
             failOnError: true,
          },
-         standards: {
-            cmd: `${config.commands.tsc} -p ${config.ts.configs.standards} --pretty`,
-         },
          types: {
             cmd: `${config.commands.tsc} -p ${config.ts.configs.types} --pretty`,
          },
@@ -68,15 +64,6 @@ module.exports = (grunt) => {
 
       concurrent: {
          'build-ts-outputs': [ 'build-types', 'build-esm', 'build-commonjs' ],
-      },
-
-      markdownlint: {
-         all: {
-            src: [ './README.md' ],
-            options: {
-               config: grunt.file.readJSON('.markdownlint.json'),
-            },
-         },
       },
 
       watch: {
@@ -99,17 +86,13 @@ module.exports = (grunt) => {
    grunt.loadNpmTasks('grunt-contrib-clean');
    grunt.loadNpmTasks('grunt-concurrent');
    grunt.loadNpmTasks('grunt-contrib-watch');
-   grunt.loadNpmTasks('grunt-markdownlint');
-
-   grunt.registerTask('standards', [ 'eslint', 'exec:standards' ]);
-   grunt.registerTask('default', [ 'standards' ]);
 
    grunt.registerTask('build-types', 'exec:types');
    grunt.registerTask('build-esm', 'exec:esm');
    grunt.registerTask('build-commonjs', 'exec:commonjs');
    grunt.registerTask('build-ts-outputs', 'concurrent:build-ts-outputs');
    grunt.registerTask('build', [ 'concurrent:build-ts-outputs' ]);
-
    grunt.registerTask('develop', [ 'clean', 'build', 'watch' ]);
 
+   grunt.registerTask('default', [ 'build' ]);
 };

@@ -35,7 +35,8 @@ familiar will accelerate your development, allowing you to focus on your busines
 
 ## Usage
 
-Here's a simple example to get you up and running quickly (assumes your execution environment is Node 12.x):
+Here's a simple example to get you up and running quickly (assumes your execution environment
+is Node 12.x):
 
 `npm i @silvermine/lambda-express`
 
