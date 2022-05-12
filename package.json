@@ -9,6 +9,9 @@
       "prepare": "grunt build",
       "test": "check-node-version --npm 6.14.12 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha",
       "commitlint": "commitlint --from 86324da",
+      "eslint": "eslint '{,!(node_modules|dist)/**/}*.{js,ts}'",
+      "markdownlint": "markdownlint -c .markdownlint.json -i CHANGELOG.md '{,!(node_modules)/**/}*.md'",
+      "standards": "tsc -p tsconfig.json --pretty && npm run markdownlint && npm run eslint",
       "release:preview": "node ./node_modules/@silvermine/standardization/scripts/release.js preview",
       "release:prep-changelog": "node ./node_modules/@silvermine/standardization/scripts/release.js prep-changelog",
       "release:finalize": "node ./node_modules/@silvermine/standardization/scripts/release.js finalize"
@@ -26,7 +29,7 @@
    "devDependencies": {
       "@silvermine/chai-strictly-equal": "1.1.0",
       "@silvermine/eslint-config": "3.1.0-beta.0",
-      "@silvermine/standardization": "1.3.0",
+      "@silvermine/standardization": "2.0.0",
       "@silvermine/typescript-config": "0.9.0",
       "@types/aws-lambda": "8.10.17",
       "@types/chai": "4.1.7",
@@ -45,7 +48,6 @@
       "grunt-concurrent": "2.3.1",
       "grunt-contrib-clean": "2.0.0",
       "grunt-contrib-watch": "1.1.0",
-      "grunt-eslint": "22.0.0",
       "grunt-exec": "3.0.0",
       "mocha": "8.4.0",
       "nyc": "13.1.0",
