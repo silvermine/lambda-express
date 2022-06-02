@@ -19,7 +19,13 @@ export default class ProcessorChain implements IProcessorChain {
    }
 
    public run(originalErr: unknown, req: Request, resp: Response, done: NextCallback): void {
-      const subRequest = this._makeSubRequest(req);
+      let subRequest: Request;
+
+      try {
+         subRequest = this._makeSubRequest(req);
+      } catch(newErr) {
+         return done(newErr);
+      }
 
       const run = _.reduce(this._subprocessors.slice().reverse(), (next: NextCallback, rp: ErrorHandlingRequestProcessor): NextCallback => {
          return (err) => {

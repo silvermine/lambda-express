@@ -1,10 +1,11 @@
 import _ from 'underscore';
-import { Application, Request } from '../../src';
+import { Application, Request, Response } from '../../src';
 import { apiGatewayRequest, handlerContext } from '../samples';
 import { expect } from 'chai';
 import { RouteMatchingProcessorChain } from '../../src/chains/RouteMatchingProcessorChain';
 import { PathParams } from '../../src/interfaces';
 import { StringMap } from '@silvermine/toolbox';
+import { spy, assert } from 'sinon';
 
 class TestRouteMatchingProcessorChain extends RouteMatchingProcessorChain {
    // override protected methods as public for the sake of making them testable
@@ -86,12 +87,16 @@ describe('RouteMatchingProcessorChain', () => {
       return () => {
          test('/users', '/users', {});
          test('/users/:id', '/users/1234', { id: '1234' });
+         test('/users/:id', '/users/%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B', { id: '\u4e00\u4e8c\u4e09\u56db' });
          test('/users/:id?', '/users', {});
          test('/users/:id?', '/users/1234', { id: '1234' });
+         test('/users/:id?', '/users/%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B', { id: '\u4e00\u4e8c\u4e09\u56db' });
          test('/users/*', '/users', {});
          test('/users/*', '/users/', {});
          test('/users/*', '/users/usa/tx/austin', { '0': 'usa/tx/austin' });
          test('/users/*', '/users/usa/tx/austin/', { '0': 'usa/tx/austin/' });
+         test('/users/*', '/users/usa/tx/%E5%A5%A5%E6%96%AF%E6%B1%80', { '0': 'usa/tx/\u5965\u65af\u6c40' });
+         test('/users/*', '/users/usa/tx/%E5%A5%A5%E6%96%AF%E6%B1%80/', { '0': 'usa/tx/\u5965\u65af\u6c40/' });
          test('/cars/:car/drivers/:driver/licenses/:license', '/cars/ford/drivers/jeremy/licenses/CM', {
             car: 'ford',
             driver: 'jeremy',
@@ -113,6 +118,10 @@ describe('RouteMatchingProcessorChain', () => {
          test(routes, '/cars/ford/drivers/jeremy', { car: 'ford', driver: 'jeremy' });
          test(routes, '/cars/ford/drivers/jeremy/licenses', { car: 'ford', driver: 'jeremy' });
          test(routes, '/cars/ford/drivers/jeremy/licenses/CM', { car: 'ford', driver: 'jeremy', license: 'CM' });
+
+         // Edge cases for encoded path components
+         test('/cars/:car', '/cars/%F0%90%8F%BF', { car: '\uD800\uDFFF' }); // high/low surrogate pair is decoded correctly
+         test('/cars/:car', '/cars/%C3%AA', { car: '\u00ea' }); // "e" with circumflex correctly encoded using UTF-8
       };
    };
 
@@ -138,6 +147,22 @@ describe('RouteMatchingProcessorChain', () => {
       };
 
       it('makes the subrequest with the correct path and params', makePathAndParamsTests(test));
+   });
+
+   it('short-circuits to done when a path parameter is badly encoded', () => {
+      // "%EA" is the unicode code point for an "e with circumflex". The client should be
+      // sending this character using UTF-8 encoding (i.e. %C3%AA)
+      const path = '/hello/%EA',
+            app = new Application(),
+            req = new Request(app, _.extend(apiGatewayRequest(), { path }), handlerContext()),
+            chain = new RouteMatchingProcessorChain([], '/hello/:name'),
+            resp = new Response(app, req, spy()),
+            done = spy();
+
+      chain.run(undefined, req, resp, done);
+      assert.calledOnce(done);
+      expect(done.lastCall.args[0]).to.be.an.instanceOf(URIError);
+      expect(done.lastCall.args).to.have.length(1);
    });
 
 });
