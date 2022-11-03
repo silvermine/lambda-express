@@ -1,8 +1,7 @@
+dist: focal
 language: node_js
 node_js:
-   # TODO: Re-enable when Travis fixes their images issues with latest Node.js
-   # See: https://github.com/silvermine/standardization/issues/39
-   # - "node" # Latest node version
+   - "node" # Latest node version
    - "lts/*" # Latest LTS version
    - "14"
    - "12"
