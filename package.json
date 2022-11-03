@@ -7,7 +7,7 @@
    "module": "./dist/esm/index",
    "scripts": {
       "prepare": "grunt build",
-      "test": "check-node-version --npm 6.14.12 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha",
+      "test": "check-node-version --npm 8.5.5 && TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha",
       "commitlint": "commitlint --from 86324da",
       "eslint": "eslint '{,!(node_modules|dist)/**/}*.{js,ts}'",
       "markdownlint": "markdownlint -c .markdownlint.json -i CHANGELOG.md '{,!(node_modules)/**/}*.md'",
