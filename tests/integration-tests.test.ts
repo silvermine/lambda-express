@@ -202,6 +202,23 @@ describe('integration tests', () => {
          testWithLastResortHandler(404, '404 Not Found', [ 'X-Path' ]);
       });
 
+      it('returns 400 for URL segment decoding errors', () => {
+         app.get('/hello/:name', (_req: Request, resp: Response): void => {
+            resp.send('hello handler ran');
+         });
+
+         // "%EA" is the unicode code point for an "e with circumflex". The client should
+         // be sending this character using UTF-8 encoding (i.e. %C3%AA)
+         const evt = makeRequestEvent('/hello/%EA', albMultiValHeadersRequest()),
+               cb = spy();
+
+         app.run(evt, handlerContext(), cb);
+         assert.calledOnce(cb);
+         expect(cb.firstCall.args[0]).to.eql(undefined);
+         expect(cb.firstCall.args[1].statusCode).to.eql(400);
+         expect(cb.firstCall.args[1].body).to.eql('');
+      });
+
       it('returns 500 when there is an error in the middleware - matching request processor skipped', () => {
          // eslint-disable-next-line @typescript-eslint/no-unused-vars
          app.use((_req: Request, _resp: Response, _next: NextCallback) => { throw new Error('Oops!'); });

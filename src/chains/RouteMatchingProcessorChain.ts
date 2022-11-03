@@ -39,7 +39,12 @@ export class RouteMatchingProcessorChain extends ProcessorChain implements IRequ
             const key = this._paramKeys[i];
 
             if (key && !_.isEmpty(v)) {
-               params[key.name] = decodeURIComponent(v);
+               try {
+                  params[key.name] = decodeURIComponent(v);
+               } catch(err) {
+                  err.statusCode = 400;
+                  throw err;
+               }
             }
          });
       }
