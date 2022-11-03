@@ -4,6 +4,7 @@ import { RequestEvent, HandlerContext } from './request-response-types';
 import { StringUnknownMap, Writable } from '@silvermine/toolbox';
 import { Request, Response } from '.';
 import _ from 'underscore';
+import { isErrorWithStatusCode } from './interfaces';
 
 export default class Application extends Router {
 
@@ -93,7 +94,7 @@ export default class Application extends Router {
       this.handle(undefined, req, resp, (err: unknown): void => {
          // handler of last resort:
          if (err) {
-            resp.sendStatus(500);
+            resp.sendStatus(isErrorWithStatusCode(err) && err.statusCode ? err.statusCode : 500);
          } else {
             resp.sendStatus(404);
          }

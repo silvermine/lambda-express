@@ -9,7 +9,7 @@ import {
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
-import { NextCallback, IRoute, IRouter } from '../src/interfaces';
+import { NextCallback, IRoute, IRouter, ErrorWithStatusCode } from '../src/interfaces';
 import { expect } from 'chai';
 import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '@silvermine/toolbox';
 
@@ -214,6 +214,17 @@ describe('integration tests', () => {
          app.use((_req: Request, _resp: Response, _next: NextCallback) => { throw new Error('Oops!'); });
          app.get('/goodbye', (req: Request, resp: Response) => { resp.send(`Path: ${req.path}`); });
          testWithLastResortHandler(500, '500 Internal Server Error');
+      });
+
+      it('returns a custom status code if one is set on the thrown error', () => {
+         // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         app.use((_req: Request, _resp: Response, _next: NextCallback) => {
+            const err: ErrorWithStatusCode<Error> = new Error('Oops!');
+
+            err.statusCode = 418;
+            throw err;
+         });
+         testWithLastResortHandler(418, '418 I\'m a teapot');
       });
 
    });

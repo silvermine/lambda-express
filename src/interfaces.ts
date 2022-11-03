@@ -3,6 +3,9 @@
 import Request from './Request';
 import Response from './Response';
 import { LogLevel } from './logging/logging-types';
+import { isError } from 'util';
+import { isNumber } from '@silvermine/toolbox';
+import { StatusCodes } from './status-codes';
 
 /**
  * The function that is passed to request processors for them to signal that they are done
@@ -258,4 +261,13 @@ export interface RouteProcessorAppender<T> {
     * @param handlers the processors to mount to this route's path
     */
    (...handlers: ProcessorOrProcessors[]): T;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-type-alias
+export type ErrorWithStatusCode<T extends Error> = T & { statusCode?: number };
+
+export function isErrorWithStatusCode<T extends Error>(o: any): o is ErrorWithStatusCode<T> {
+   return isError(o)
+      && isNumber((o as any).statusCode)
+      && StatusCodes[(o as any).statusCode] !== undefined;
 }
