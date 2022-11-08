@@ -9,7 +9,7 @@ import {
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
 import { RequestEvent } from '../src/request-response-types';
-import { NextCallback, IRoute, IRouter } from '../src/interfaces';
+import { NextCallback, IRoute, IRouter, ErrorWithStatusCode } from '../src/interfaces';
 import { expect } from 'chai';
 import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '@silvermine/toolbox';
 
@@ -202,6 +202,23 @@ describe('integration tests', () => {
          testWithLastResortHandler(404, '404 Not Found', [ 'X-Path' ]);
       });
 
+      it('returns 400 for URL segment decoding errors', () => {
+         app.get('/hello/:name', (_req: Request, resp: Response): void => {
+            resp.send('hello handler ran');
+         });
+
+         // "%EA" is the unicode code point for an "e with circumflex". The client should
+         // be sending this character using UTF-8 encoding (i.e. %C3%AA)
+         const evt = makeRequestEvent('/hello/%EA', albMultiValHeadersRequest()),
+               cb = spy();
+
+         app.run(evt, handlerContext(), cb);
+         assert.calledOnce(cb);
+         expect(cb.firstCall.args[0]).to.eql(undefined);
+         expect(cb.firstCall.args[1].statusCode).to.eql(400);
+         expect(cb.firstCall.args[1].body).to.eql('');
+      });
+
       it('returns 500 when there is an error in the middleware - matching request processor skipped', () => {
          // eslint-disable-next-line @typescript-eslint/no-unused-vars
          app.use((_req: Request, _resp: Response, _next: NextCallback) => { throw new Error('Oops!'); });
@@ -214,6 +231,17 @@ describe('integration tests', () => {
          app.use((_req: Request, _resp: Response, _next: NextCallback) => { throw new Error('Oops!'); });
          app.get('/goodbye', (req: Request, resp: Response) => { resp.send(`Path: ${req.path}`); });
          testWithLastResortHandler(500, '500 Internal Server Error');
+      });
+
+      it('returns a custom status code if one is set on the thrown error', () => {
+         // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         app.use((_req: Request, _resp: Response, _next: NextCallback) => {
+            const err: ErrorWithStatusCode<Error> = new Error('Oops!');
+
+            err.statusCode = 418;
+            throw err;
+         });
+         testWithLastResortHandler(418, '418 I\'m a teapot');
       });
 
    });
@@ -868,6 +896,32 @@ describe('integration tests', () => {
          });
       });
 
+   });
+
+   it('allows URL segment decoding errors to be handled by an error handler', () => {
+      app.get('/hello/:name', (_req: Request, resp: Response): void => {
+         resp.send('hello handler ran');
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      app.use((err: any, _req: Request, resp: Response, _next: NextCallback): void => {
+         if (err instanceof URIError) {
+            resp.status(418).send('URIError handled by error handler');
+            return;
+         }
+
+         resp.status(500).send('unknown error handled by error handler');
+      });
+
+      // "%EA" is the unicode code point for an "e with circumflex". The client should be
+      // sending this character using UTF-8 encoding (i.e. %C3%AA)
+      const evt = makeRequestEvent('/hello/%EA', albMultiValHeadersRequest()),
+            cb = spy();
+
+      app.run(evt, handlerContext(), cb);
+      assert.calledOnce(cb);
+      expect(cb.firstCall.args[0]).to.eql(undefined);
+      expect(cb.firstCall.args[1].statusCode).to.eql(418);
+      expect(cb.firstCall.args[1].body).to.eql('URIError handled by error handler');
    });
 
 });

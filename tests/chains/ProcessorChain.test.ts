@@ -2,7 +2,7 @@ import _ from 'underscore';
 import ProcessorChain, { IProcessorChain } from '../../src/chains/ProcessorChain';
 import { expect } from 'chai';
 import { wrapRequestProcessors } from '../../src/utils/wrapRequestProcessor';
-import { SinonSpy, spy, assert } from 'sinon';
+import { SinonSpy, spy, stub, assert } from 'sinon';
 import makeRequestProcessor from '../test-utils/makeRequestProcessor';
 import { Application, Request, Response } from '../../src';
 import { apiGatewayRequest, handlerContext } from '../samples';
@@ -23,6 +23,13 @@ function assertCalledWith(fn: SinonSpy, err: string, realError: boolean = false)
       expect(fn.lastCall.args[0].message).to.eql(err);
    } else {
       expect(fn.lastCall.args[0]).to.eql(err);
+   }
+}
+
+class TestProcessorChain extends ProcessorChain {
+   // override protected methods as public for the sake of making them testable
+   public _makeSubRequest(req: Request): Request {
+      return super._makeSubRequest(req);
    }
 }
 
@@ -341,6 +348,24 @@ describe('ProcessorChain', () => {
       assertAllCalledOnceInOrder(procs[0], procs[1], procs[2], procs[3], done);
       assertNotCalled(procs[4], procs[5]);
       assert.calledWithExactly(done); // `done` called with no args
+   });
+
+   it('short-circuits to done when _makeSubRequest throws an error', () => {
+      const procs: SinonSpy[] = [
+         /* 0 */ makeRequestProcessor('mw1'),
+         /* 1 */ makeRequestProcessor('rh1'),
+         /* 2 */ makeRequestProcessor('eh1', { handlesErrors: true }),
+      ];
+
+      const processorChain = new TestProcessorChain(wrapRequestProcessors(procs)),
+            makeSubRequestStub = stub(processorChain, '_makeSubRequest');
+
+      makeSubRequestStub.throws(new Error('Error from _makeSubRequest'));
+
+      processorChain.run(undefined, req, resp, done);
+      assertAllCalledOnceInOrder(done);
+      assertNotCalled(procs[0], procs[1], procs[2]);
+      assertCalledWith(done, 'Error from _makeSubRequest', true); // `done` called with Error(string)
    });
 
 });
