@@ -1,6 +1,21 @@
-# Change Log
+# Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file.
+See [our coding standards][commit-messages] for commit guidelines.
+
+### [0.3.1](https://github.com/silvermine/lambda-express/compare/v0.3.0...v0.3.1) (2022-12-23)
+
+
+### Features
+
+* make last resort error handler return status code found on error ([f4c159d](https://github.com/silvermine/lambda-express/commit/f4c159ddfaf47ac24d38e353cfb097fb35fe7d6f))
+
+
+### Bug Fixes
+
+* allow badly encoded path parameters to be handled by error handlers ([a98414c](https://github.com/silvermine/lambda-express/commit/a98414c21387316d7ada70ae3f9f42c38273ca4b))
+* return 400 when decoding bad path parameters ([6542e13](https://github.com/silvermine/lambda-express/commit/6542e13fcdbf2de4dc83810e930e6ebf95b64ffb))
+
 
 # [0.2.0](https://github.com/silvermine/lambda-express/compare/v0.1.0...v0.2.0) (2019-04-02)
 
@@ -31,3 +46,5 @@ well-tested. It works with both API Gateway and Application Load Balancer. We ar
 planning to add a few more features before we cut a 1.0.0 release. You can grep the code
 for "TODO" items at commit 1d4f33e to see the list of those potential features and
 changes.
+
+[commit-messages]: https://github.com/silvermine/silvermine-info/blob/master/commit-history.md#commit-messages
