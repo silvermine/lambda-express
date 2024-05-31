@@ -28,7 +28,7 @@
    },
    "homepage": "https://github.com/silvermine/lambda-express#readme",
    "devDependencies": {
-      "@silvermine/chai-strictly-equal": "1.1.0",
+      "@silvermine/chai-strictly-equal": "1.1.1",
       "@silvermine/eslint-config": "3.1.0-beta.0",
       "@silvermine/standardization": "2.0.0",
       "@silvermine/typescript-config": "0.9.0",
