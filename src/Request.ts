@@ -3,7 +3,7 @@ import _ from 'underscore';
 import qs from 'qs';
 import cookie from 'cookie';
 import Application from './Application';
-import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSourceType } from './request-response-types';
+import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSourceType, APIGatewayRequestEventV2, isAPIGatewayRequestEventV2 } from './request-response-types';
 import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from '@silvermine/toolbox';
 import ConsoleLogger from './logging/ConsoleLogger';
 
@@ -203,7 +203,7 @@ export default class Request {
     * Events passed to Lambda handlers by API Gateway and Application Load Balancers
     * contain a "request context", which is available in this property.
     */
-   public readonly requestContext: RequestEventRequestContext;
+   public readonly requestContext: RequestEventRequestContext | APIGatewayRequestEventV2['requestContext'];
 
    /**
     * Contains the `context` object passed to the Lambda function's handler. Rarely used
@@ -254,7 +254,9 @@ export default class Request {
       } else {
          event = eventOrRequest;
 
-         const parsedQuery = this._parseQuery(event.multiValueQueryStringParameters || {}, event.queryStringParameters || {});
+         const parsedQuery = isAPIGatewayRequestEventV2(event)
+         ? this._parseQuery({}, {}, event.rawQueryString)
+         : this._parseQuery(event.multiValueQueryStringParameters || {}, event.queryStringParameters || {}, '')
 
          // Despite the fact that the Express docs say that the `originalUrl` is `baseUrl
          // + path`, it's actually always equal to the original URL that initiated the
@@ -262,7 +264,7 @@ export default class Request {
          // `path` is changed too, *but* `originalUrl` stays the same. This would not be
          // the case if `originalUrl = `baseUrl + path`. See the documentation on the
          // `url` getter for more details.
-         url = `${event.path}?${parsedQuery.raw}`;
+         url = `${isAPIGatewayRequestEventV2(event) ? event.rawPath : event.path}?${parsedQuery.raw}`;
          originalURL = url;
          query = parsedQuery.parsed;
       }
@@ -270,8 +272,8 @@ export default class Request {
       this.app = app;
       this._event = event;
       this._headers = this._parseHeaders(event);
-      this.method = (event.httpMethod || '').toUpperCase();
-      this.body = this._parseBody(event.body);
+      this.method = this._parseMethod(event);
+      this.body = this._parseBody(event.body || null);
 
       this.eventSourceType = ('elb' in event.requestContext) ? Request.SOURCE_ALB : Request.SOURCE_APIGW;
 
@@ -279,7 +281,7 @@ export default class Request {
       this.requestContext = event.requestContext;
 
       // Fields that depend on headers:
-      this.cookies = this._parseCookies();
+      this.cookies = this._parseCookies(event);
       this.hostname = this._parseHostname();
       this.ip = this._parseIP();
       this.protocol = this._parseProtocol();
@@ -476,11 +478,20 @@ export default class Request {
    }
 
    private _parseHeaders(evt: RequestEvent): StringArrayOfStringsMap {
-      const headers = evt.multiValueHeaders || _.mapObject(evt.headers, (v) => { return [ v ]; });
+      let headers;
+      if (isAPIGatewayRequestEventV2(evt)) {
+         // NOTE - APIGWv2 multi-value headers that contain commas in their values will
+         // not be reconstructed as accurately
+         headers = _.mapObject(evt.headers, (v) => { return (v || '').split(','); });
+      } else {
+         headers = evt.multiValueHeaders || _.mapObject(evt.headers, (v) => { return [ v ]; });
+      }
 
       return _.reduce(headers, (memo: StringArrayOfStringsMap, v, k) => {
          const key = k.toLowerCase();
 
+         // evt.multiValueHeaders is a map that can contain undefined values
+         v ||= [];
          memo[key] = v;
 
          if (key === 'referer') {
@@ -493,8 +504,11 @@ export default class Request {
       }, {});
    }
 
-   private _parseCookies(): StringUnknownMap {
-      const cookieHeader = this.get('cookie') || '';
+   private _parseCookies(evt: RequestEvent): StringUnknownMap {
+      // TODO - is option 1 safe? If so, then it is the simpler approach
+      // Option 1. join evt.cookies with semicolons
+      // Option 2. reduce the list, parseing and merging into cookies
+      const cookieHeader = isAPIGatewayRequestEventV2(evt) ? (evt.cookies || []).join(';'): this.get('cookie') || '';
 
       if (_.isEmpty(cookieHeader)) {
          return {};
@@ -533,13 +547,25 @@ export default class Request {
          return this.requestContext.identity.sourceIp;
       }
 
+      if ('http' in this.requestContext && !_.isEmpty(this.requestContext.http.sourceIp)) {
+         return this.requestContext.http.sourceIp;
+      }
+
       if (!this.app.isEnabled('trust proxy')) {
          return;
       }
 
-      let ip = (this.get('x-forwarded-for') || '').replace(/,.*/, '');
+      // Since the X-Forwarded-For header may or may not have been split on commas,
+      // get the first element of the list, and then strip anything after the first comma.
+      let ip = (this.headerAll('x-forwarded-for') || [ '' ])[0].replace(/,.*/, '').trim();
 
       return _.isEmpty(ip) ? undefined : ip;
+   }
+
+   private _parseMethod(evt: RequestEvent): string {
+      return (
+         isAPIGatewayRequestEventV2(evt) ? evt.requestContext.http.method : evt.httpMethod
+      ).toUpperCase();
    }
 
    private _parseProtocol(): string | undefined {
@@ -554,9 +580,7 @@ export default class Request {
       }
    }
 
-   private _parseQuery(multiValQuery: StringArrayOfStringsMap, query: StringMap): { raw: string; parsed: KeyValueStringObject } {
-      let queryString;
-
+   private _parseQuery(multiValQuery: Record<string, string[] | undefined>, query: Record<string, string | undefined>, queryString: string | undefined): { raw: string; parsed: KeyValueStringObject } {
       // It may seem strange to encode the URI components immediately after decoding them.
       // But, this allows us to take values that are encoded and those that are not, then
       // decode them to make sure we know they're not encoded, and then encode them so
@@ -564,17 +588,19 @@ export default class Request {
       // If we simply encoded them, and we received a value that was still encoded
       // already, then we would encode the `%` signs, etc, and end up with double-encoded
       // values that were not correct.
-      if (_.isEmpty(multiValQuery)) {
-         queryString = _.reduce(query, (memo, v, k) => {
-            return memo + `&${k}=${encodeURIComponent(safeDecode(v))}`;
-         }, '');
-      } else {
-         queryString = _.reduce(multiValQuery, (memo, vals, k) => {
-            _.each(vals, (v) => {
-               memo += `&${k}=${encodeURIComponent(safeDecode(v))}`;
-            });
-            return memo;
-         }, '');
+      if (!queryString) {
+         if (_.isEmpty(multiValQuery)) {
+            queryString = _.reduce(query, (memo, v, k) => {
+               return memo + `&${k}=${encodeURIComponent(safeDecode(v || ''))}`;
+            }, '');
+         } else {
+            queryString = _.reduce(multiValQuery, (memo, vals, k) => {
+               _.each(vals || [], (v) => {
+                  memo += `&${k}=${encodeURIComponent(safeDecode(v || ''))}`;
+               });
+               return memo;
+            }, '');
+         }
       }
 
       return { raw: queryString, parsed: qs.parse(queryString) };

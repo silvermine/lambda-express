@@ -1,7 +1,7 @@
 import _ from 'underscore';
 import { expect } from 'chai';
 import { Request, Application } from '../src';
-import { RequestEvent } from '../src/request-response-types';
+import { RequestEvent, isAPIGatewayRequestEventV2 } from '../src/request-response-types';
 import {
    apiGatewayRequest,
    handlerContext,
@@ -9,6 +9,8 @@ import {
    albMultiValHeadersRequest,
    albRequestRawQuery,
    apiGatewayRequestRawQuery,
+   apiGatewayRequestV2,
+   apiGatewayRequestRawQueryV2,
    albMultiValHeadersRawQuery,
 } from './samples';
 import { isKeyValueStringObject } from '@silvermine/toolbox';
@@ -21,14 +23,16 @@ describe('Request', () => {
 
    beforeEach(() => {
       app = new Application();
-      allEventTypes = [ apiGatewayRequest(), albRequest(), albMultiValHeadersRequest() ];
+      allEventTypes = [ apiGatewayRequest(), apiGatewayRequestV2(), albRequest(), albMultiValHeadersRequest() ];
       allRequestTypes = [
          new Request(app, apiGatewayRequest(), handlerContext()),
+         new Request(app, apiGatewayRequestV2(), handlerContext()),
          new Request(app, albRequest(), handlerContext()),
          new Request(app, albMultiValHeadersRequest(), handlerContext()),
       ];
       rawQueries = [
          apiGatewayRequestRawQuery,
+         apiGatewayRequestRawQueryV2,
          albRequestRawQuery,
          albMultiValHeadersRawQuery,
       ];
@@ -45,12 +49,13 @@ describe('Request', () => {
          expect(new Request(app, _.extend({}, albRequest(), { httpMethod: 'get' }), handlerContext()).method).to.strictlyEqual('GET');
          expect(new Request(app, _.extend({}, albRequest(), { httpMethod: 'PoSt' }), handlerContext()).method).to.strictlyEqual('POST');
 
-         // make sure that undefined values don't break it:
-         let evt2: RequestEvent = albRequest();
+         // TODO - this doesn't seem possible without encountering: error TS2790: The operand of a 'delete' operator must be optional.
+         // // make sure that undefined values don't break it:
+         // let evt2: RequestEvent = albRequest();
 
-         delete evt2.httpMethod;
-         expect(evt2.httpMethod).to.strictlyEqual(undefined);
-         expect(new Request(app, evt2, handlerContext()).method).to.strictlyEqual('');
+         // delete evt2.httpMethod;
+         // expect(evt2.httpMethod).to.strictlyEqual(undefined);
+         // expect(new Request(app, evt2, handlerContext()).method).to.strictlyEqual('');
       });
 
       it('sets URL related fields correctly, when created from an event', () => {
@@ -159,7 +164,9 @@ describe('Request', () => {
       it('works if no headers exist in the event', () => {
          _.each(allEventTypes, (evt) => {
             delete evt.headers;
-            delete evt.multiValueHeaders;
+            if (!isAPIGatewayRequestEventV2(evt)) {
+               delete evt.multiValueHeaders;
+            }
             const req = new Request(app, evt, handlerContext());
 
             expect(req.header('foo')).to.eql(undefined);
@@ -456,7 +463,7 @@ describe('Request', () => {
             if (evt.headers) {
                evt.headers['x-requested-with'] = 'XMLHttpRequest';
             }
-            if (evt.multiValueHeaders) {
+            if (!isAPIGatewayRequestEventV2(evt) && evt.multiValueHeaders) {
                evt.multiValueHeaders['x-requested-with'] = [ 'XMLHttpRequest' ];
             }
             req = new Request(app, evt, handlerContext());
@@ -510,7 +517,14 @@ describe('Request', () => {
             const partiallyEncoded = { a: 'b+c', d: 'e%20f', g: 'h i' },
                   expected = { a: 'b c', d: 'e f', g: 'h i' };
 
-            event.multiValueQueryStringParameters = {};
+            if (isAPIGatewayRequestEventV2(event)) {
+               event.rawQueryString = _.reduce(partiallyEncoded, (memo, v, k) => {
+                  return memo = `${memo}&${k}=${v}`;
+               }, '');
+            }
+            else {
+               event.multiValueQueryStringParameters = {};
+            }
             event.queryStringParameters = partiallyEncoded;
 
             const req = new Request(app, event, handlerContext());
@@ -524,7 +538,15 @@ describe('Request', () => {
             const partiallyEncoded = { a: [ 'b+c', 'e%20f', 'h i' ] },
                   expected = { a: [ 'b c', 'e f', 'h i' ] };
 
-            event.multiValueQueryStringParameters = partiallyEncoded;
+            if (isAPIGatewayRequestEventV2(event)) {
+               event.rawQueryString = _.reduce(partiallyEncoded, (memo, mv, k) => {
+                  const paramString = mv.map((v) => `${k}=${v}`).join('&')
+                  return memo = `${memo}&${paramString}`;
+               }, '');
+            }
+            else {
+               event.multiValueQueryStringParameters = partiallyEncoded;
+            }
             event.queryStringParameters = {};
 
             const req = new Request(app, event, handlerContext());

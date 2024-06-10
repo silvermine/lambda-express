@@ -768,7 +768,7 @@ describe('Response', () => {
             if (overrides.queryParamName !== false) {
                let queryParamName = overrides.queryParamName || 'callback';
 
-               if (evt.multiValueQueryStringParameters) {
+               if ('multiValueQueryStringParameters' in evt && evt.multiValueQueryStringParameters) {
                   evt.multiValueQueryStringParameters[queryParamName] = queryParamValues;
                }
                if (evt.queryStringParameters) {

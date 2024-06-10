@@ -2,11 +2,16 @@
 
 import {
    APIGatewayEventRequestContext as OrigAPIGatewayEventRequestContext,
+   APIGatewayEventRequestContextV2 as OrigAPIGatewayEventRequestContextV2,
    APIGatewayProxyEvent,
+   APIGatewayProxyEventV2,
    Context,
    APIGatewayProxyResult,
+   APIGatewayProxyStructuredResultV2,
+   ALBEvent,
+   ALBEventRequestContext,
+   ALBResult,
 } from 'aws-lambda';
-import { StringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
 
 /* COMBO TYPES */
 
@@ -14,16 +19,18 @@ import { StringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
  * The `evt` argument passed to a Lambda handler that represents the request (from API
  * Gateway or ALB).
  */
-export type RequestEvent = ApplicationLoadBalancerRequestEvent | APIGatewayRequestEvent;
+export type RequestEvent = ApplicationLoadBalancerRequestEvent | APIGatewayRequestEvent | APIGatewayRequestEventV2;
 
 /**
  * The "request context", which is accessible at `evt.requestContext`.
  */
 export type RequestEventRequestContext = APIGatewayEventRequestContext | ApplicationLoadBalancerEventRequestContext;
 
-export interface ResponseResult extends APIGatewayProxyResult {
-   multiValueHeaders: StringArrayOfStringsMap;
-   statusDescription?: string;
+export type ResponseResult = APIGatewayProxyResult | APIGatewayProxyStructuredResultV2 | ALBResult;
+
+export function isALBResult(evt: ResponseResult, test: boolean): evt is ALBResult {
+   // TODO - this type gaurd doesn't do any useful checking
+   return test && 'statusCode' in evt;
 }
 
 /**
@@ -51,29 +58,23 @@ if needed at a later time) */
 export interface APIGatewayRequestEvent extends APIGatewayProxyEvent {}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface APIGatewayRequestEventV2 extends APIGatewayProxyEventV2 {}
+
+export function isAPIGatewayRequestEventV2(evt: RequestEvent): evt is APIGatewayRequestEventV2 {
+   return ('apiId' in evt.requestContext && 'version' in evt && evt.version === '2.0');
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface APIGatewayEventRequestContext extends OrigAPIGatewayEventRequestContext {}
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface APIGatewayEventRequestContextV2 extends OrigAPIGatewayEventRequestContextV2 {}
 
-/* APPLICATION LOAD BALANCER TYPES (these are not yet included in aws-lambda) */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ApplicationLoadBalancerRequestEvent extends ALBEvent {}
 
-export interface ApplicationLoadBalancerRequestEvent {
-   body: string | null;
-   httpMethod: string;
-   isBase64Encoded: boolean;
-   path: string;
-   headers?: StringMap;
-   multiValueHeaders?: StringArrayOfStringsMap;
-   queryStringParameters?: StringMap;
-   multiValueQueryStringParameters?: StringArrayOfStringsMap;
-   requestContext: ApplicationLoadBalancerEventRequestContext;
-}
-
-export interface ApplicationLoadBalancerEventRequestContext {
-   elb: {
-      targetGroupArn: string;
-   };
-}
-
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ApplicationLoadBalancerEventRequestContext extends ALBEventRequestContext {}
 
 /* OTHER TYPES RELATED TO REQUESTS AND RESPONSES */
 export interface CookieOpts {

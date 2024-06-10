@@ -1,8 +1,10 @@
 import _ from 'underscore';
 import {
    APIGatewayEventRequestContext,
+   APIGatewayEventRequestContextV2,
    ApplicationLoadBalancerEventRequestContext,
    APIGatewayRequestEvent,
+   APIGatewayRequestEventV2,
    ApplicationLoadBalancerRequestEvent } from '../src/request-response-types';
 import { Context } from 'aws-lambda';
 
@@ -14,7 +16,7 @@ export const handlerContext = (fillAllFields: boolean = false): Context => {
       logGroupName: '/aws/lambda/echo-api-prd-echo',
       logStreamName: '2019/01/31/[$LATEST]bb001267fb004ffa8e1710bba30b4ae7',
       functionName: 'echo-api-prd-echo',
-      memoryLimitInMB: 1024,
+      memoryLimitInMB: '1024',
       functionVersion: '$LATEST',
       awsRequestId: 'ed6cac60-bb31-4c1f-840d-dd34c80eb9a3',
       invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:echo-api-prd-echo',
@@ -67,11 +69,14 @@ export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {
          cognitoAuthenticationType: null,
          cognitoIdentityId: null,
          cognitoIdentityPoolId: null,
+         clientCert: null,
+         principalOrgId: null,
          sourceIp: '12.12.12.12',
          user: null,
          userAgent: 'curl/7.54.0',
          userArn: null,
       },
+      protocol: 'https',
       path: '/prd',
       stage: 'prd',
       requestId: 'a507736b-259e-11e9-8fcf-4f1f08c4591e',
@@ -141,6 +146,87 @@ export const apiGatewayRequest = (): APIGatewayRequestEvent => {
          'foo[a]': [ 'bar b', 'baz c' ],
          x: [ '1', '2' ],
          y: [ 'z' ],
+      },
+   };
+};
+
+export const apiGatewayRequestContextV2 = (): APIGatewayEventRequestContextV2 => {
+   return {
+      accountId: '123456789012',
+      apiId: 'someapi',
+      authentication: {
+         clientCert: {
+            clientCertPem: 'CERT_CONTENT',
+            subjectDN: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+            issuerDN: 'Example issuer',
+            serialNumber: 'a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1:a1',
+            validity: {
+               notBefore: 'May 28 12:30:02 2019 GMT',
+               notAfter: 'Aug  5 09:36:04 2025 GM',
+            }
+         },
+      },
+      domainName: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+      domainPrefix: 'b5gee6dacf',
+      http: {
+         method: 'GET',
+         sourceIp: '12.12.12.12',
+         protocol: 'HTTP/1.1',
+         path: '/prd',
+         userAgent: 'curl/7.54.0',
+      },
+      requestId: 'a507736b-259e-11e9-8fcf-4f1f08c4591e',
+      routeKey: '$default',
+      stage: 'prd',
+      time: '12/Mar/2020:19:03:58 +0000',
+      timeEpoch: 1548969891530,
+   };
+};
+
+export const apiGatewayRequestRawQueryV2 = '?&foo[a]=bar%20b&foo[a]=baz%20c&x=1&x=2&y=z';
+
+export const apiGatewayRequestV2 = (): APIGatewayRequestEventV2 => {
+   return {
+      version: '2.0',
+      routeKey: '$default',
+      body: '',
+      isBase64Encoded: false,
+      rawPath: '/echo/asdf/a',
+      rawQueryString: '&foo[a]=bar%20b&foo[a]=baz%20c&x=1&x=2&y=z',
+      stageVariables: {},
+      requestContext: apiGatewayRequestContextV2(),
+      headers: {
+         Accept: '*/*',
+         'CloudFront-Forwarded-Proto': 'https',
+         'CloudFront-Is-Desktop-Viewer': 'true',
+         'CloudFront-Is-Mobile-Viewer': 'false',
+         'CloudFront-Is-SmartTV-Viewer': 'false',
+         'CloudFront-Is-Tablet-Viewer': 'false',
+         'CloudFront-Viewer-Country': 'US',
+         Host: 'b5gee6dacf.execute-api.us-east-1.amazonaws.com',
+         'User-Agent': 'curl/7.54.0',
+         Via: '2.0 4ee511e558a0400aa4b9c1d34d92af5a.cloudfront.net (CloudFront)',
+         'X-Amz-Cf-Id': 'xn-ohXlUAed-32bae2cfb7164fd690ffffb87d36b032==',
+         'X-Amzn-Trace-Id': 'Root=1-4b5398e2-a7fbe4f92f2e911013cba76b',
+         'X-Forwarded-For': '8.8.8.8, 2.3.4.5',
+         'X-Forwarded-Port': '443',
+         'X-Forwarded-Proto': 'https',
+         Referer: 'https://en.wikipedia.org/wiki/HTTP_referer',
+         Cookie: 'uid=abc; ga=1234; foo=bar; baz=foo%5Ba%5D; obj=j%3A%7B%22abc%22%3A123%7D; onechar=j; bad=j%3A%7Ba%7D',
+      },
+      cookies: [
+         'uid=abc',
+         'ga=1234',
+         'foo=bar',
+         'baz=foo%5Ba%5D',
+         'obj=j%3A%7B%22abc%22%3A123%7D',
+         'onechar=j',
+         'bad=j%3A%7Ba%7D',
+      ],
+      queryStringParameters: {
+         'foo[a]': 'bar b,baz c',
+         x: '1,2',
+         y: 'z',
       },
    };
 };

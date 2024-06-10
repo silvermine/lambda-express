@@ -2,7 +2,7 @@ import _ from 'underscore';
 import cookie from 'cookie';
 import { Application, Request } from '.';
 import { StringMap, isStringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
-import { CookieOpts, ResponseResult } from './request-response-types';
+import { CookieOpts, ResponseResult, isALBResult } from './request-response-types';
 import { StatusCodes } from './status-codes';
 import { Callback } from 'aws-lambda';
 import mimeLookup from './mime/mimeLookup';
@@ -411,7 +411,7 @@ export default class Response {
          body: this._body,
       };
 
-      if (this.isALB()) {
+      if (isALBResult(output, this.isALB())) {
          // There are some differences in the response format between APIGW and ALB. See
          // https://serverless-training.com/articles/api-gateway-vs-application-load-balancer-technical-details/#application-load-balancer-response-event-format-differences
 
@@ -432,11 +432,12 @@ export default class Response {
          //    because it's the safest thing to do. Note that even if you have no headers
          //    to send, you must at least supply an empty object (`{}`) for ELB, whereas
          //    with APIGW it's okay to send `null`.
-         output.headers = _.reduce(output.multiValueHeaders, (memo, v, k) => {
+         output.headers = _.reduce(output.multiValueHeaders || {}, (memo, v, k) => {
             memo[k] = v[v.length - 1];
             return memo;
-         }, {} as StringMap);
+         }, {} as Record<string, boolean | number | string>);
 
+         // TODO - the following comment seems to conflict with the new data type
          // Finally, note that ELB requires that all header values be strings already,
          // whereas APIGW will allow booleans / integers as values, which it would then
          // convert. As long as you're using this library from a TypeScript project, the
