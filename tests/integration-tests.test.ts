@@ -8,7 +8,7 @@ import {
 } from './samples';
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
-import { RequestEvent } from '../src/request-response-types';
+import { RequestEvent, ResponseResult } from '../src/request-response-types';
 import { NextCallback, IRoute, IRouter, ErrorWithStatusCode } from '../src/interfaces';
 import { expect } from 'chai';
 import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '@silvermine/toolbox';
@@ -369,20 +369,21 @@ describe('integration tests', () => {
 
                app.run(evt, handlerContext(), cb);
 
-               const expectedCallbackValue = {
+               const expectedCallbackValue: ResponseResult = {
                   statusCode: code,
                   statusDescription: desc,
                   body: expectedBody,
                   isBase64Encoded: false,
-                  headers: {
-                     'X-Did-Run-All-Hello-World': 'true',
-                  } as StringMap,
                   multiValueHeaders: {
                      'X-Did-Run-All-Hello-World': [ 'true' ],
-                  } as StringArrayOfStringsMap,
+                  },
                };
 
-               expectedCallbackValue.headers[hdrName] = hdrVal;
+               expectedCallbackValue.headers = {
+                  'X-Did-Run-All-Hello-World': 'true',
+                  [hdrName]: hdrVal,
+               };
+
                expectedCallbackValue.multiValueHeaders[hdrName] = [ hdrVal ];
 
                if (contentType) {
