@@ -5,8 +5,10 @@ import {
    APIGatewayProxyEvent,
    Context,
    APIGatewayProxyResult,
+   ALBEvent,
+   ALBEventRequestContext,
 } from 'aws-lambda';
-import { StringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
+import { StringArrayOfStringsMap } from '@silvermine/toolbox';
 
 /* COMBO TYPES */
 
@@ -54,25 +56,14 @@ export interface APIGatewayRequestEvent extends APIGatewayProxyEvent {}
 export interface APIGatewayEventRequestContext extends OrigAPIGatewayEventRequestContext {}
 
 
-/* APPLICATION LOAD BALANCER TYPES (these are not yet included in aws-lambda) */
+/* APPLICATION LOAD BALANCER TYPES (we export these with our own names to make it easier
+to modify them if needed at a later time) */
 
-export interface ApplicationLoadBalancerRequestEvent {
-   body: string | null;
-   httpMethod: string;
-   isBase64Encoded: boolean;
-   path: string;
-   headers?: StringMap;
-   multiValueHeaders?: StringArrayOfStringsMap;
-   queryStringParameters?: StringMap;
-   multiValueQueryStringParameters?: StringArrayOfStringsMap;
-   requestContext: ApplicationLoadBalancerEventRequestContext;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ApplicationLoadBalancerRequestEvent extends ALBEvent {}
 
-export interface ApplicationLoadBalancerEventRequestContext {
-   elb: {
-      targetGroupArn: string;
-   };
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ApplicationLoadBalancerEventRequestContext extends ALBEventRequestContext {}
 
 
 /* OTHER TYPES RELATED TO REQUESTS AND RESPONSES */

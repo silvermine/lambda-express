@@ -4,7 +4,7 @@ import qs from 'qs';
 import cookie from 'cookie';
 import Application from './Application';
 import { RequestEvent, HandlerContext, RequestEventRequestContext, LambdaEventSourceType } from './request-response-types';
-import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap } from '@silvermine/toolbox';
+import { StringMap, KeyValueStringObject, StringArrayOfStringsMap, StringUnknownMap, isUndefined } from '@silvermine/toolbox';
 import ConsoleLogger from './logging/ConsoleLogger';
 
 function safeDecode(s: string): string {
@@ -479,6 +479,10 @@ export default class Request {
       const headers = evt.multiValueHeaders || _.mapObject(evt.headers, (v) => { return [ v ]; });
 
       return _.reduce(headers, (memo: StringArrayOfStringsMap, v, k) => {
+         if (isUndefined(v)) {
+            return memo;
+         }
+
          const key = k.toLowerCase();
 
          memo[key] = v;
@@ -554,7 +558,7 @@ export default class Request {
       }
    }
 
-   private _parseQuery(multiValQuery: StringArrayOfStringsMap, query: StringMap): { raw: string; parsed: KeyValueStringObject } {
+   private _parseQuery(multiValQuery: Partial<StringArrayOfStringsMap>, query: Partial<StringMap>): { raw: string; parsed: KeyValueStringObject } {
       let queryString;
 
       // It may seem strange to encode the URI components immediately after decoding them.
@@ -566,11 +570,15 @@ export default class Request {
       // values that were not correct.
       if (_.isEmpty(multiValQuery)) {
          queryString = _.reduce(query, (memo, v, k) => {
+            if (isUndefined(v)) {
+               return memo;
+            }
+
             return memo + `&${k}=${encodeURIComponent(safeDecode(v))}`;
          }, '');
       } else {
          queryString = _.reduce(multiValQuery, (memo, vals, k) => {
-            _.each(vals, (v) => {
+            _.each(vals || [], (v) => {
                memo += `&${k}=${encodeURIComponent(safeDecode(v))}`;
             });
             return memo;
