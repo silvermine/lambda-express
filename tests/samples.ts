@@ -1,9 +1,12 @@
 import _ from 'underscore';
 import {
-   APIGatewayEventRequestContext,
+   RequestEventRequestContext,
    ApplicationLoadBalancerEventRequestContext,
    APIGatewayRequestEvent,
-   ApplicationLoadBalancerRequestEvent } from '../src/request-response-types';
+   ApplicationLoadBalancerRequestEvent,
+   RequestEvent,
+   APIGatewayEventRequestContext,
+} from '../src/request-response-types';
 import { Context } from 'aws-lambda';
 
 export const handlerContext = (fillAllFields: boolean = false): Context => {
@@ -51,12 +54,15 @@ export const handlerContext = (fillAllFields: boolean = false): Context => {
    return ctx;
 };
 
-export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {
+type SampleRequestContextGenerator<T extends RequestEventRequestContext> = (path?: string, method?: string) => T;
+type SampleRequestGenerator<T extends RequestEvent> = (path?: string, method?: string) => T;
+
+export const apiGatewayRequestContext: SampleRequestContextGenerator<APIGatewayEventRequestContext> = (path?: string, method?: string) => {
    return {
       accountId: '123456789012',
       apiId: 'someapi',
       authorizer: null,
-      httpMethod: 'GET',
+      httpMethod: method || 'GET',
       identity: {
          accessKey: null,
          accountId: null,
@@ -74,7 +80,7 @@ export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {
          userAgent: 'curl/7.54.0',
          userArn: null,
       },
-      path: '/prd',
+      path: path || '/prd',
       protocol: 'HTTP/1.1',
       stage: 'prd',
       requestId: 'a507736b-259e-11e9-8fcf-4f1f08c4591e',
@@ -86,16 +92,16 @@ export const apiGatewayRequestContext = (): APIGatewayEventRequestContext => {
 
 export const apiGatewayRequestRawQuery = '?&foo[a]=bar%20b&foo[a]=baz%20c&x=1&x=2&y=z';
 
-export const apiGatewayRequest = (): APIGatewayRequestEvent => {
+export const apiGatewayRequest: SampleRequestGenerator<APIGatewayRequestEvent> = (path?: string, method?: string) => {
    return {
       body: null,
-      httpMethod: 'GET',
+      httpMethod: method || 'GET',
       isBase64Encoded: false,
-      path: '/echo/asdf/a',
+      path: path || '/echo/asdf/a',
       resource: '/{proxy+}',
       pathParameters: { proxy: 'echo/asdf/a' },
       stageVariables: null,
-      requestContext: apiGatewayRequestContext(),
+      requestContext: apiGatewayRequestContext(path, method),
       headers: {
          Accept: '*/*',
          'CloudFront-Forwarded-Proto': 'https',
@@ -148,7 +154,7 @@ export const apiGatewayRequest = (): APIGatewayRequestEvent => {
    };
 };
 
-export const albRequestContext = (): ApplicationLoadBalancerEventRequestContext => {
+export const albRequestContext: SampleRequestContextGenerator<ApplicationLoadBalancerEventRequestContext> = () => {
    return {
       elb: {
          targetGroupArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/alb-lambda-prd-tg1/180d40bbdb377b34',
@@ -156,20 +162,20 @@ export const albRequestContext = (): ApplicationLoadBalancerEventRequestContext 
    };
 };
 
-const albRequestBase = (): ApplicationLoadBalancerRequestEvent => {
+const albRequestBase = (path?: string, method?: string): ApplicationLoadBalancerRequestEvent => {
    return {
       body: '',
-      httpMethod: 'GET',
+      httpMethod: method || 'GET',
       isBase64Encoded: false,
-      path: '/echo/asdf/a',
+      path: path || '/echo/asdf/a',
       requestContext: albRequestContext(),
    };
 };
 
 export const albRequestRawQuery = '?&foo%5Ba%5D=baz%20c&x=2&y=z';
 
-export const albRequest = (): ApplicationLoadBalancerRequestEvent => {
-   return _.extend({}, albRequestBase(), {
+export const albRequest: SampleRequestGenerator<ApplicationLoadBalancerRequestEvent> = (path?: string, method?: string) => {
+   return _.extend({}, albRequestBase(path, method), {
       queryStringParameters: {
          'foo%5Ba%5D': 'baz%20c',
          x: '2',
@@ -193,8 +199,8 @@ export const albRequest = (): ApplicationLoadBalancerRequestEvent => {
 
 export const albMultiValHeadersRawQuery = '?&foo%5Ba%5D=bar%20b&foo%5Ba%5D=baz%20c&x=1&x=2&y=z';
 
-export const albMultiValHeadersRequest = (): ApplicationLoadBalancerRequestEvent => {
-   return _.extend({}, albRequestBase(), {
+export const albMultiValHeadersRequest: SampleRequestGenerator<ApplicationLoadBalancerRequestEvent> = (path?: string, method?: string) => {
+   return _.extend({}, albRequestBase(path, method), {
       multiValueQueryStringParameters: {
          'foo%5Ba%5D': [ 'bar%20b', 'baz c' ],
          x: [ '1', '2' ],

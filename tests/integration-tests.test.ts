@@ -21,13 +21,9 @@ describe('integration tests', () => {
       app = new Application();
    });
 
-   const makeRequestEvent = (path: string, base?: RequestEvent, method?: string): RequestEvent => {
-      return _.extend(base || apiGatewayRequest(), { path: path, httpMethod: (method || 'GET') });
-   };
-
    const testWithLastResortHandler = (code: number, desc: string, testHeaders: string[] = [], expectedBody = ''): void => {
       const cb = spy(),
-            evt = makeRequestEvent('/hello/world', albMultiValHeadersRequest()),
+            evt = albMultiValHeadersRequest('/hello/world'),
             headers: StringMap = {},
             multiValueHeaders: StringArrayOfStringsMap = {};
 
@@ -54,7 +50,7 @@ describe('integration tests', () => {
 
    const testOutcome = (method: string, path: string, expectedBody: string): void => {
       const cb = spy(),
-            evt = makeRequestEvent(path, apiGatewayRequest(), method);
+            evt = apiGatewayRequest(path, method);
 
       app.run(evt, handlerContext(), cb);
 
@@ -121,7 +117,7 @@ describe('integration tests', () => {
       };
 
       it('works - APIGW', () => {
-         const cb = test(makeRequestEvent('/hello/world'));
+         const cb = test(apiGatewayRequest('/hello/world'));
 
          assert.calledWithExactly(cb, undefined, {
             statusCode: 200,
@@ -137,7 +133,7 @@ describe('integration tests', () => {
       });
 
       it('works - ALB', () => {
-         const cb = test(makeRequestEvent('/hello/world', albRequest()));
+         const cb = test(albRequest('/hello/world'));
 
          assert.calledWithExactly(cb, undefined, {
             statusCode: 200,
@@ -160,7 +156,7 @@ describe('integration tests', () => {
       });
 
       it('works - ALBMV', () => {
-         const cb = test(makeRequestEvent('/hello/world', albMultiValHeadersRequest()));
+         const cb = test(albMultiValHeadersRequest('/hello/world'));
 
          assert.calledWithExactly(cb, undefined, {
             statusCode: 200,
@@ -209,7 +205,7 @@ describe('integration tests', () => {
 
          // "%EA" is the unicode code point for an "e with circumflex". The client should
          // be sending this character using UTF-8 encoding (i.e. %C3%AA)
-         const evt = makeRequestEvent('/hello/%EA', albMultiValHeadersRequest()),
+         const evt = albMultiValHeadersRequest('/hello/%EA'),
                cb = spy();
 
          app.run(evt, handlerContext(), cb);
@@ -341,16 +337,16 @@ describe('integration tests', () => {
    describe('other HTTP methods', () => {
       // eslint-disable-next-line max-len,max-params
       const addTestsForMethod = (method: string, code: number, desc: string, hdrName: string, hdrVal: string, expectedBody: string, prep: () => void, contentType?: string): void => {
-         const baseEvents = {
-            'APIGW': apiGatewayRequest(),
-            'ALB': albRequest(),
-            'ALBMV': albMultiValHeadersRequest(),
+         const baseEventGenerators = {
+            'APIGW': apiGatewayRequest,
+            'ALB': albRequest,
+            'ALBMV': albMultiValHeadersRequest,
          };
 
-         _.each(baseEvents, (baseEvent, eventTypeName) => {
+         _.each(baseEventGenerators, (baseEventGenerator, eventTypeName) => {
             it(`works with HTTP method ${method} - ${eventTypeName}`, () => {
                const cb = spy(),
-                     evt = makeRequestEvent('/hello/world', baseEvent, method);
+                     evt = baseEventGenerator('/hello/world', method);
 
                // this request handler should get run for all methods:
                app.all('/hello/world', (_req: Request, resp: Response, next: NextCallback): void => {
@@ -760,7 +756,7 @@ describe('integration tests', () => {
    describe('request object', () => {
 
       it('has an immutable context property', () => {
-         let evt = makeRequestEvent('/test', apiGatewayRequest(), 'GET'),
+         let evt = apiGatewayRequest('/test', 'GET'),
              ctx = handlerContext(true),
              handler;
 
@@ -915,7 +911,7 @@ describe('integration tests', () => {
 
       // "%EA" is the unicode code point for an "e with circumflex". The client should be
       // sending this character using UTF-8 encoding (i.e. %C3%AA)
-      const evt = makeRequestEvent('/hello/%EA', albMultiValHeadersRequest()),
+      const evt = albMultiValHeadersRequest('/hello/%EA'),
             cb = spy();
 
       app.run(evt, handlerContext(), cb);
