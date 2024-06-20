@@ -1,9 +1,8 @@
 import { Callback, Context } from 'aws-lambda';
 import Router from './Router';
 import { RequestEvent, HandlerContext } from './request-response-types';
-import { StringUnknownMap, Writable } from '@silvermine/toolbox';
+import { isUndefined, StringUnknownMap, Writable } from '@silvermine/toolbox';
 import { Request, Response } from '.';
-import _ from 'underscore';
 import { isErrorWithStatusCode } from './interfaces';
 
 export default class Application extends Router {
@@ -102,28 +101,26 @@ export default class Application extends Router {
    }
 
    private _createHandlerContext(context: Context): HandlerContext {
-      // keys should exist on both `HandlerContext` and `Context`
-      const keys: (keyof HandlerContext & keyof Context)[] = [
-         'functionName', 'functionVersion', 'invokedFunctionArn', 'memoryLimitInMB',
-         'awsRequestId', 'logGroupName', 'logStreamName', 'identity', 'clientContext',
-         'getRemainingTimeInMillis',
-      ];
+      const newContext: Writable<HandlerContext> = {
+         functionName: context.functionName,
+         functionVersion: context.functionVersion,
+         invokedFunctionArn: context.invokedFunctionArn,
+         memoryLimitInMB: context.memoryLimitInMB,
+         awsRequestId: context.awsRequestId,
+         logGroupName: context.logGroupName,
+         logStreamName: context.logStreamName,
+         getRemainingTimeInMillis: context.getRemainingTimeInMillis,
+      };
 
-      let handlerContext: Writable<HandlerContext>;
+      if (!isUndefined(context.identity)) {
+         newContext.identity = Object.freeze({ ...context.identity });
+      }
 
-      handlerContext = _.reduce(keys, (memo, key) => {
-         let contextValue = context[key];
+      if (!isUndefined(context.clientContext)) {
+         newContext.clientContext = Object.freeze({ ...context.clientContext });
+      }
 
-         if (typeof contextValue === 'object' && contextValue) {
-            // Freeze sub-objects
-            memo[key] = Object.freeze(_.extend({}, contextValue));
-         } else if (typeof contextValue !== 'undefined') {
-            memo[key] = contextValue;
-         }
-         return memo;
-      }, {} as Writable<HandlerContext>);
-
-      return Object.freeze(handlerContext);
+      return Object.freeze(newContext);
    }
 
 }

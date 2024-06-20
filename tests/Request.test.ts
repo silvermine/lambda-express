@@ -11,7 +11,7 @@ import {
    apiGatewayRequestRawQuery,
    albMultiValHeadersRawQuery,
 } from './samples';
-import { isKeyValueStringObject } from '@silvermine/toolbox';
+import { isKeyValueStringObject, Optional } from '@silvermine/toolbox';
 import ConsoleLogger from '../src/logging/ConsoleLogger';
 import sinon from 'sinon';
 import { DebugLogObject } from '../src/logging/logging-types';
@@ -44,13 +44,16 @@ describe('Request', () => {
          expect(new Request(app, albRequest(), handlerContext()).method).to.strictlyEqual('GET');
          expect(new Request(app, _.extend({}, albRequest(), { httpMethod: 'get' }), handlerContext()).method).to.strictlyEqual('GET');
          expect(new Request(app, _.extend({}, albRequest(), { httpMethod: 'PoSt' }), handlerContext()).method).to.strictlyEqual('POST');
+      });
 
-         // make sure that undefined values don't break it:
-         let evt2: RequestEvent = albRequest();
+      // TODO: Why is this test here? It was added during initial implementation but none
+      // of the types agree with this test.
+      it('an undefined `httpMethod` doesn\'t break the setting of `method`', () => {
+         let evt2: Optional<RequestEvent, 'httpMethod'> = albRequest();
 
          delete evt2.httpMethod;
          expect(evt2.httpMethod).to.strictlyEqual(undefined);
-         expect(new Request(app, evt2, handlerContext()).method).to.strictlyEqual('');
+         expect(new Request(app, evt2 as RequestEvent, handlerContext()).method).to.strictlyEqual('');
       });
 
       it('sets URL related fields correctly, when created from an event', () => {

@@ -20,8 +20,9 @@ class TestResponse extends Response {
 
 }
 
+const EMPTY_CB = (): void => {}; // eslint-disable-line no-empty-function
+
 describe('Response', () => {
-   const EMPTY_CB = (): void => {}; // eslint-disable-line no-empty-function
 
    let app: Application, sampleReq: Request, sampleResp: Response;
 
@@ -1020,8 +1021,6 @@ describe('Response', () => {
       });
 
       describe('send', () => {
-         type Extender = (resp: Response, output: any) => void;
-
          const test = (evt: RequestEvent, code: number, msg: string | false, body: any, extender?: Extender): void => {
             let output = makeOutput(code, msg, body);
 

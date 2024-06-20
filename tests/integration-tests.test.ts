@@ -8,7 +8,7 @@ import {
 } from './samples';
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
-import { RequestEvent } from '../src/request-response-types';
+import { RequestEvent, ResponseResult } from '../src/request-response-types';
 import { NextCallback, IRoute, IRouter, ErrorWithStatusCode } from '../src/interfaces';
 import { expect } from 'chai';
 import { StringArrayOfStringsMap, StringMap, KeyValueStringObject } from '@silvermine/toolbox';
@@ -369,20 +369,21 @@ describe('integration tests', () => {
 
                app.run(evt, handlerContext(), cb);
 
-               const expectedCallbackValue = {
+               const expectedCallbackValue: ResponseResult = {
                   statusCode: code,
                   statusDescription: desc,
                   body: expectedBody,
                   isBase64Encoded: false,
-                  headers: {
-                     'X-Did-Run-All-Hello-World': 'true',
-                  } as StringMap,
                   multiValueHeaders: {
                      'X-Did-Run-All-Hello-World': [ 'true' ],
-                  } as StringArrayOfStringsMap,
+                  },
                };
 
-               expectedCallbackValue.headers[hdrName] = hdrVal;
+               expectedCallbackValue.headers = {
+                  'X-Did-Run-All-Hello-World': 'true',
+                  [hdrName]: hdrVal,
+               };
+
                expectedCallbackValue.multiValueHeaders[hdrName] = [ hdrVal ];
 
                if (contentType) {
@@ -729,14 +730,14 @@ describe('integration tests', () => {
       it('updates path params when `request.url` changes to a URL with different path params', () => {
          const router1 = new Router(),
                router2 = new Router(),
-               USER_ID = '1337',
-               USERNAME = 'mluedke';
+               userID = '1337',
+               username = 'mluedke';
 
          let router1Params, router2Params;
 
          router1.get('/users/:userID', (req: Request, _resp: Response, next: NextCallback) => {
             router1Params = req.params;
-            req.url = `/profile/${USERNAME}`;
+            req.url = `/profile/${username}`;
             next();
          });
 
@@ -748,10 +749,10 @@ describe('integration tests', () => {
          app.addSubRouter('/admin', router1);
          app.addSubRouter('/admin', router2);
 
-         testOutcome('GET', `/admin/users/${USER_ID}`, `${USERNAME} profile`);
+         testOutcome('GET', `/admin/users/${userID}`, `${username} profile`);
 
-         expect(router1Params).to.eql({ userID: USER_ID });
-         expect(router2Params).to.eql({ username: USERNAME });
+         expect(router1Params).to.eql({ userID: userID });
+         expect(router2Params).to.eql({ username: username });
       });
 
    });
