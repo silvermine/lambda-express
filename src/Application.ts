@@ -3,7 +3,6 @@ import Router from './Router';
 import { RequestEvent, HandlerContext } from './request-response-types';
 import { isUndefined, StringUnknownMap, Writable } from '@silvermine/toolbox';
 import { Request, Response } from '.';
-import _ from 'underscore';
 import { isErrorWithStatusCode } from './interfaces';
 
 export default class Application extends Router {

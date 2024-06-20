@@ -11,12 +11,12 @@ import ConsoleLogger from '../../src/logging/ConsoleLogger';
 import _ from 'underscore';
 import sinon, { SinonSpy } from 'sinon';
 
-describe('ConsoleLogger', () => {
+const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
+   interface: 'ALB',
+   getTimeUntilFnTimeout: () => { return 0; },
+};
 
-   const DEFAULT_LOGGER_CONFIG: LoggerConfig = {
-      interface: 'ALB',
-      getTimeUntilFnTimeout: () => { return 0; },
-   };
+describe('ConsoleLogger', () => {
 
    interface Spies {
       log: SinonSpy;

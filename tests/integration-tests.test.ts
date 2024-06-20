@@ -730,14 +730,14 @@ describe('integration tests', () => {
       it('updates path params when `request.url` changes to a URL with different path params', () => {
          const router1 = new Router(),
                router2 = new Router(),
-               USER_ID = '1337',
-               USERNAME = 'mluedke';
+               userID = '1337',
+               username = 'mluedke';
 
          let router1Params, router2Params;
 
          router1.get('/users/:userID', (req: Request, _resp: Response, next: NextCallback) => {
             router1Params = req.params;
-            req.url = `/profile/${USERNAME}`;
+            req.url = `/profile/${username}`;
             next();
          });
 
@@ -749,10 +749,10 @@ describe('integration tests', () => {
          app.addSubRouter('/admin', router1);
          app.addSubRouter('/admin', router2);
 
-         testOutcome('GET', `/admin/users/${USER_ID}`, `${USERNAME} profile`);
+         testOutcome('GET', `/admin/users/${userID}`, `${username} profile`);
 
-         expect(router1Params).to.eql({ userID: USER_ID });
-         expect(router2Params).to.eql({ username: USERNAME });
+         expect(router1Params).to.eql({ userID: userID });
+         expect(router2Params).to.eql({ username: username });
       });
 
    });
