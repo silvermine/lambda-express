@@ -32,7 +32,7 @@
       "@silvermine/eslint-config": "3.2.0",
       "@silvermine/standardization": "2.0.0",
       "@silvermine/typescript-config": "1.0.0",
-      "@types/aws-lambda": "8.10.17",
+      "@types/aws-lambda": "8.10.140",
       "@types/chai": "4.1.7",
       "@types/cookie": "0.3.2",
       "@types/mocha": "5.2.5",
