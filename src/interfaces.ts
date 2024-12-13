@@ -3,7 +3,6 @@
 import Request from './Request';
 import Response from './Response';
 import { LogLevel } from './logging/logging-types';
-import { isError } from 'util';
 import { isNumber } from '@silvermine/toolbox';
 import { StatusCodes } from './status-codes';
 
@@ -267,7 +266,7 @@ export interface RouteProcessorAppender<T> {
 export type ErrorWithStatusCode<T extends Error> = T & { statusCode?: number };
 
 export function isErrorWithStatusCode<T extends Error>(o: any): o is ErrorWithStatusCode<T> {
-   return isError(o)
+   return o instanceof Error
       && isNumber((o as any).statusCode)
       && StatusCodes[(o as any).statusCode] !== undefined;
 }

@@ -1,12 +1,11 @@
 import _ from 'underscore';
 import cookie from 'cookie';
 import { Application, Request } from '.';
-import { StringMap, isStringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
+import { isUndefined, StringMap, isStringMap, StringArrayOfStringsMap } from '@silvermine/toolbox';
 import { CookieOpts, ResponseResult } from './request-response-types';
 import { StatusCodes } from './status-codes';
 import { Callback } from 'aws-lambda';
 import mimeLookup from './mime/mimeLookup';
-import { isUndefined } from 'util';
 
 export default class Response {
 
