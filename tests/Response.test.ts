@@ -2,7 +2,12 @@ import _ from 'underscore';
 import { expect } from 'chai';
 import { fail } from 'assert';
 import { Request, Response, Application } from '../src';
-import { apiGatewayRequest, handlerContext, albRequest, albMultiValHeadersRequest } from './samples';
+import {
+   handlerContext,
+   albRequest,
+   albMultiValHeadersRequest,
+   makeAPIGatewayRequestEvent,
+} from './samples';
 import sinon, { spy, assert, SinonSpy, SinonSandbox, SinonFakeTimers } from 'sinon';
 import { StringArrayOfStringsMap, StringMap } from '@silvermine/toolbox';
 import { RequestEvent, CookieOpts } from '../src/request-response-types';
@@ -28,7 +33,7 @@ describe('Response', () => {
 
    beforeEach(() => {
       app = new Application();
-      sampleReq = new Request(app, apiGatewayRequest(), handlerContext());
+      sampleReq = new Request(app, makeAPIGatewayRequestEvent(), handlerContext());
       sampleResp = new Response(app, sampleReq, EMPTY_CB);
    });
 
@@ -152,7 +157,7 @@ describe('Response', () => {
          // This is for JS-only functionality. TypeScript users will be safeguarded from
          // doing this by type safety.
          const val: any = true,
-               req = new Request(app, apiGatewayRequest(), handlerContext()),
+               req = new Request(app, makeAPIGatewayRequestEvent(), handlerContext()),
                logger = new ConsoleLogger({ interface: 'ALB', getTimeUntilFnTimeout: () => { return 0; } }),
                errorFnSpy = sinon.spy();
 
@@ -479,16 +484,15 @@ describe('Response', () => {
 
             if (referer === null) {
                // use the existing header
-               evt = apiGatewayRequest();
+               evt = makeAPIGatewayRequestEvent();
             } else if (referer === false) {
                // remove existing header
-               evt = apiGatewayRequest();
+               evt = makeAPIGatewayRequestEvent();
                delete evt.multiValueHeaders.Referer;
                delete evt.headers.Referer;
             } else {
                // override the existing one
-               evt = _.extend(apiGatewayRequest(), {
-                  multiValueHeaders: { 'Referer': [ referer ] },
+               evt = makeAPIGatewayRequestEvent({
                   headers: { 'Referer': referer },
                });
             }
@@ -619,7 +623,7 @@ describe('Response', () => {
 
    describe('body property', () => {
       it('contains what was sent in the response', () => {
-         const resp = new Response(app, new Request(app, apiGatewayRequest(), handlerContext()), spy());
+         const resp = new Response(app, new Request(app, makeAPIGatewayRequestEvent(), handlerContext()), spy());
 
          resp.send({ foo: 'bar' });
          expect(resp.body).to.eql(JSON.stringify({ foo: 'bar' }));
@@ -680,10 +684,10 @@ describe('Response', () => {
             expect(cb.firstCall.args).to.eql([ undefined, output ]);
          };
 
-         it('sends immediately - APIGW', () => { test(apiGatewayRequest(), false, false); });
+         it('sends immediately - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, false); });
          it('sends immediately - ALB', () => { test(albRequest(), 'OK', false); });
          it('sends immediately - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', false); });
-         it('sends after setting headers - APIGW', () => { test(apiGatewayRequest(), false, true); });
+         it('sends after setting headers - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, true); });
          it('sends after setting headers - ALB', () => { test(albRequest(), 'OK', true); });
          it('sends after setting headers - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', true); });
       });
@@ -715,10 +719,10 @@ describe('Response', () => {
             expect(cb.firstCall.args).to.eql([ undefined, output ]);
          };
 
-         it('sends immediately - APIGW', () => { test(apiGatewayRequest(), false, false); });
+         it('sends immediately - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, false); });
          it('sends immediately - ALB', () => { test(albRequest(), 'OK', false); });
          it('sends immediately - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', false); });
-         it('sends after headers - APIGW', () => { test(apiGatewayRequest(), false, true); });
+         it('sends after headers - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, true); });
          it('sends after headers - ALB', () => { test(albRequest(), 'OK', true); });
          it('sends after headers - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', true); });
 
@@ -730,7 +734,7 @@ describe('Response', () => {
             }
          };
 
-         it('sends with alternate status code - APIGW', () => { test(apiGatewayRequest(), false, false, ext1); });
+         it('sends with alternate status code - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, false, ext1); });
          it('sends with alternate status code - ALB', () => { test(albRequest(), 'OK', false, ext1); });
          it('sends with alternate status code - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', false, ext1); });
 
@@ -743,7 +747,7 @@ describe('Response', () => {
             }
          };
 
-         it('overrides previously-set content type - APIGW', () => { test(apiGatewayRequest(), false, false, ext2); });
+         it('overrides previously-set content type - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, false, ext2); });
          it('overrides previously-set content type - ALB', () => { test(albRequest(), 'OK', false, ext2); });
          it('overrides previously-set content type - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', false, ext2); });
       });
@@ -794,7 +798,7 @@ describe('Response', () => {
             expect(cb.firstCall.args).to.eql([ undefined, output ]);
          };
 
-         it('sends immediately - APIGW', () => { test(apiGatewayRequest(), false); });
+         it('sends immediately - APIGW', () => { test(makeAPIGatewayRequestEvent(), false); });
          it('sends immediately - ALB', () => { test(albRequest(), 'OK'); });
          it('sends immediately - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK'); });
 
@@ -806,7 +810,7 @@ describe('Response', () => {
             }
          };
 
-         it('sends after headers - APIGW', () => { test(apiGatewayRequest(), false, ext1); });
+         it('sends after headers - APIGW', () => { test(makeAPIGatewayRequestEvent(), false, ext1); });
          it('sends after headers - ALB', () => { test(albRequest(), 'OK', ext1); });
          it('sends after headers - ALB MV', () => { test(albMultiValHeadersRequest(), 'OK', ext1); });
 
@@ -815,7 +819,7 @@ describe('Response', () => {
          };
 
          it('works with custom callback param name - APIGW', () => {
-            test(apiGatewayRequest(), false, ext2, { queryParamName: 'cbFnName' });
+            test(makeAPIGatewayRequestEvent(), false, ext2, { queryParamName: 'cbFnName' });
          });
          it('works with custom callback param name - ALB', () => {
             test(albRequest(), 'OK', ext2, { queryParamName: 'cbFnName' });
@@ -831,7 +835,7 @@ describe('Response', () => {
          };
 
          it('works like JSON when no callback in query - APIGW', () => {
-            test(apiGatewayRequest(), false, expectJSON, { queryParamName: false });
+            test(makeAPIGatewayRequestEvent(), false, expectJSON, { queryParamName: false });
          });
          it('works like JSON when no callback in query - ALB', () => {
             test(albRequest(), 'OK', expectJSON, { queryParamName: false });
@@ -841,7 +845,7 @@ describe('Response', () => {
          });
 
          it('works like JSON when non-callback param is in query - APIGW', () => {
-            test(apiGatewayRequest(), false, expectJSON, { queryParamName: 'notcallback' });
+            test(makeAPIGatewayRequestEvent(), false, expectJSON, { queryParamName: 'notcallback' });
          });
          it('works like JSON when non-callback param is in query - ALB', () => {
             test(albRequest(), 'OK', expectJSON, { queryParamName: 'notcallback' });
@@ -851,7 +855,7 @@ describe('Response', () => {
          });
 
          it('uses the first callback param value listed - APIGW', () => {
-            test(apiGatewayRequest(), false, undefined, {
+            test(makeAPIGatewayRequestEvent(), false, undefined, {
                queryParamValues: [ 'callbackOne', 'callbackTwo' ],
             });
          });
@@ -867,7 +871,7 @@ describe('Response', () => {
          });
 
          it('allows for the callback param value to contain an array index - APIGW', () => {
-            test(apiGatewayRequest(), false, undefined, {
+            test(makeAPIGatewayRequestEvent(), false, undefined, {
                queryParamValues: [ 'callbacks[123]' ],
             });
          });
@@ -883,7 +887,7 @@ describe('Response', () => {
          });
 
          it('returns JSON when callback param value contains invalid characters - APIGW', () => {
-            test(apiGatewayRequest(), false, expectJSON, {
+            test(makeAPIGatewayRequestEvent(), false, expectJSON, {
                queryParamValues: [ 'bad;fn()' ],
             });
          });
@@ -905,7 +909,7 @@ describe('Response', () => {
          };
 
          it('escapes UTF newline and paragraph separators - APIGW', () => {
-            test(apiGatewayRequest(), false, ext3, { responseObject: utfInput });
+            test(makeAPIGatewayRequestEvent(), false, ext3, { responseObject: utfInput });
          });
          it('escapes UTF newline and paragraph separators - ALB', () => {
             test(albRequest(), 'OK', ext3, { responseObject: utfInput });
@@ -1040,7 +1044,7 @@ describe('Response', () => {
             o.multiValueHeaders['Content-Type'] = [ 'text/html' ];
          };
 
-         it('sends string immediately - APIGW', () => { test(apiGatewayRequest(), 200, false, 'body', ext1); });
+         it('sends string immediately - APIGW', () => { test(makeAPIGatewayRequestEvent(), 200, false, 'body', ext1); });
          it('sends string immediately - ALB', () => { test(albRequest(), 200, 'OK', 'body', ext1); });
          it('sends string immediately - ALB MV', () => { test(albMultiValHeadersRequest(), 200, 'OK', 'body', ext1); });
 
@@ -1049,7 +1053,7 @@ describe('Response', () => {
             o.multiValueHeaders['Content-Type'] = [ 'foo/bar' ];
          };
 
-         it('sends string with existing content type - APIGW', () => { test(apiGatewayRequest(), 200, false, 'body', ext2); });
+         it('sends string with existing content type - APIGW', () => { test(makeAPIGatewayRequestEvent(), 200, false, 'body', ext2); });
          it('sends string with existing content type - ALB', () => { test(albRequest(), 200, 'OK', 'body', ext2); });
          it('sends string with existing content type - ALB MV', () => { test(albMultiValHeadersRequest(), 200, 'OK', 'body', ext2); });
 
@@ -1060,7 +1064,7 @@ describe('Response', () => {
             o.multiValueHeaders['Content-Type'] = [ 'application/json; charset=utf-8' ];
          };
 
-         it('sends JSON immediately - APIGW', () => { test(apiGatewayRequest(), 200, false, bodyObj, ext3); });
+         it('sends JSON immediately - APIGW', () => { test(makeAPIGatewayRequestEvent(), 200, false, bodyObj, ext3); });
          it('sends JSON immediately - ALB', () => { test(albRequest(), 200, 'OK', bodyObj, ext3); });
          it('sends JSON immediately - ALB MV', () => { test(albMultiValHeadersRequest(), 200, 'OK', bodyObj, ext3); });
       });
@@ -1085,10 +1089,10 @@ describe('Response', () => {
          };
 
          _.each({ 'OK': 200, 'Created': 201, 'Not Found': 404, 'I\'m a teapot': 418 }, (code, msg) => {
-            it(`sends immediately - APIGW - ${code} ${msg}`, () => { test(apiGatewayRequest(), code, false, false); });
+            it(`sends immediately - APIGW - ${code} ${msg}`, () => { test(makeAPIGatewayRequestEvent(), code, false, false); });
             it(`sends immediately - ALB - ${code} ${msg}`, () => { test(albRequest(), code, msg, false); });
             it(`sends immediately - ALB MV - ${code} ${msg}`, () => { test(albMultiValHeadersRequest(), code, msg, false); });
-            it(`sends after headers - APIGW - ${code} ${msg}`, () => { test(apiGatewayRequest(), code, false, true); });
+            it(`sends after headers - APIGW - ${code} ${msg}`, () => { test(makeAPIGatewayRequestEvent(), code, false, true); });
             it(`sends after headers - ALB - ${code} ${msg}`, () => { test(albRequest(), code, msg, true); });
             it(`sends after headers - ALB MV - ${code} ${msg}`, () => { test(albMultiValHeadersRequest(), code, msg, true); });
          });
