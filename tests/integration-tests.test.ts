@@ -1,10 +1,10 @@
 import _ from 'underscore';
 import {
-   apiGatewayRequest,
    handlerContext,
    albRequest,
    albMultiValHeadersRequest,
    apiGatewayRequestRawQuery,
+   makeAPIGatewayRequestEvent,
 } from './samples';
 import { spy, SinonSpy, assert } from 'sinon';
 import { Application, Request, Response, Router } from '../src';
@@ -21,8 +21,8 @@ describe('integration tests', () => {
       app = new Application();
    });
 
-   const makeRequestEvent = (path: string, base?: RequestEvent, method?: string): RequestEvent => {
-      return _.extend(base || apiGatewayRequest(), { path: path, httpMethod: (method || 'GET') });
+   const makeRequestEvent = (path: string, base: RequestEvent, method?: string): RequestEvent => {
+      return _.extend(base, { path: path, httpMethod: (method || 'GET') });
    };
 
    const testWithLastResortHandler = (code: number, desc: string, testHeaders: string[] = [], expectedBody = ''): void => {
@@ -54,7 +54,7 @@ describe('integration tests', () => {
 
    const testOutcome = (method: string, path: string, expectedBody: string): void => {
       const cb = spy(),
-            evt = makeRequestEvent(path, apiGatewayRequest(), method);
+            evt = makeAPIGatewayRequestEvent({ path, httpMethod: method });
 
       app.run(evt, handlerContext(), cb);
 
@@ -121,7 +121,7 @@ describe('integration tests', () => {
       };
 
       it('works - APIGW', () => {
-         const cb = test(makeRequestEvent('/hello/world'));
+         const cb = test(makeAPIGatewayRequestEvent({ path: '/hello/world' }));
 
          assert.calledWithExactly(cb, undefined, {
             statusCode: 200,
@@ -342,7 +342,10 @@ describe('integration tests', () => {
       // eslint-disable-next-line max-len,max-params
       const addTestsForMethod = (method: string, code: number, desc: string, hdrName: string, hdrVal: string, expectedBody: string, prep: () => void, contentType?: string): void => {
          const baseEvents = {
-            'APIGW': apiGatewayRequest(),
+            'APIGW': makeAPIGatewayRequestEvent({
+               path: '/hello/world',
+               httpMethod: method,
+            }),
             'ALB': albRequest(),
             'ALBMV': albMultiValHeadersRequest(),
          };
@@ -760,7 +763,7 @@ describe('integration tests', () => {
    describe('request object', () => {
 
       it('has an immutable context property', () => {
-         let evt = makeRequestEvent('/test', apiGatewayRequest(), 'GET'),
+         let evt = makeAPIGatewayRequestEvent({ path: '/test', httpMethod: 'GET' }),
              ctx = handlerContext(true),
              handler;
 
