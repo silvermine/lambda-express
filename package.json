@@ -9,10 +9,10 @@
       "prepare": "grunt build",
       "test": "TS_NODE_PROJECT='tests/tsconfig.json' TS_NODE_FILES=true nyc mocha",
       "check-node-version": "check-node-version --npm 10.5.0",
-      "commitlint": "commitlint --from 86324da",
+      "commitlint": "commitlint --from 47a4aea",
       "eslint": "eslint '{,!(node_modules|dist)/**/}*.{js,ts}'",
       "markdownlint": "markdownlint -c .markdownlint.json -i CHANGELOG.md '{,!(node_modules)/**/}*.md'",
-      "standards": "tsc -p tsconfig.json --pretty && npm run markdownlint && npm run eslint",
+      "standards": "tsc -p tsconfig.json --pretty && npm run commitlint && npm run markdownlint && npm run eslint",
       "release:preview": "node ./node_modules/@silvermine/standardization/scripts/release.js preview",
       "release:prep-changelog": "node ./node_modules/@silvermine/standardization/scripts/release.js prep-changelog",
       "release:finalize": "node ./node_modules/@silvermine/standardization/scripts/release.js finalize"
