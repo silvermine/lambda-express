@@ -1,6 +1,5 @@
-import _ from 'underscore';
 import { Application, Request, Router, Response } from '../../src';
-import { apiGatewayRequest, handlerContext } from '../samples';
+import { handlerContext, makeAPIGatewayRequestEvent } from '../samples';
 import { expect } from 'chai';
 import { PathParams, NextCallback } from '../../src/interfaces';
 import { SinonSpy, spy, assert } from 'sinon';
@@ -27,7 +26,7 @@ describe('SubRouterProcessorChain', () => {
    describe('matches', () => {
       const test = (routes: PathParams, path: string, expectation: boolean): void => {
          let app = new Application(),
-             req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
+             req = new Request(app, makeAPIGatewayRequestEvent({ path: path }), handlerContext()),
              router = new TestRouter(spy()),
              chain = new SubRouterProcessorChain(routes, router, app.routerOptions);
 
@@ -53,7 +52,7 @@ describe('SubRouterProcessorChain', () => {
    describe('run', () => {
       const test = (routes: PathParams, path: string, baseURL: string): void => {
          let app = new Application(),
-             req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
+             req = new Request(app, makeAPIGatewayRequestEvent({ path: path }), handlerContext()),
              resp = new Response(app, req, spy()),
              done = spy(),
              handle = spy(),

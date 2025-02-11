@@ -1,5 +1,5 @@
 import { Application, Request } from '../../src';
-import { apiGatewayRequest, handlerContext } from '../samples';
+import { handlerContext, makeAPIGatewayRequestEvent } from '../samples';
 import { IRequestMatchingProcessorChain } from '../../src/chains/ProcessorChain';
 import { MatchAllRequestsProcessorChain } from '../../src/chains/MatchAllRequestsProcessorChain';
 import { expect } from 'chai';
@@ -10,7 +10,7 @@ describe('MatchAllRequestsProcessorChain', () => {
 
    beforeEach(() => {
       app = new Application();
-      req = new Request(app, apiGatewayRequest(), handlerContext());
+      req = new Request(app, makeAPIGatewayRequestEvent(), handlerContext());
    });
 
    it('always says yes', () => {

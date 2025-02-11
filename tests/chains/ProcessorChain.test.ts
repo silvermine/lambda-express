@@ -5,7 +5,7 @@ import { wrapRequestProcessors } from '../../src/utils/wrapRequestProcessor';
 import { SinonSpy, spy, stub, assert } from 'sinon';
 import makeRequestProcessor from '../test-utils/makeRequestProcessor';
 import { Application, Request, Response } from '../../src';
-import { apiGatewayRequest, handlerContext } from '../samples';
+import { makeAPIGatewayRequestEvent, handlerContext } from '../samples';
 
 function assertAllCalledOnceInOrder(...spies: SinonSpy[]): void {
    _.each(spies, (s) => { assert.calledOnce(s); });
@@ -38,7 +38,7 @@ describe('ProcessorChain', () => {
 
    beforeEach(() => {
       app = new Application();
-      req = new Request(app, apiGatewayRequest(), handlerContext());
+      req = new Request(app, makeAPIGatewayRequestEvent(), handlerContext());
       resp = new Response(app, req, spy());
       done = spy();
    });

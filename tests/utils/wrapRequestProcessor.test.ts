@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { Request, Response, Application } from '../../src';
 import { NextCallback } from '../../src/interfaces';
 import { wrapRequestProcessor } from '../../src/utils/wrapRequestProcessor';
-import { apiGatewayRequest, handlerContext } from '../samples';
+import { handlerContext, makeAPIGatewayRequestEvent } from '../samples';
 import { spy, assert } from 'sinon';
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -13,7 +13,7 @@ describe('wrapRequestProcessor', () => {
 
    beforeEach(() => {
       app = new Application();
-      req = new Request(app, apiGatewayRequest(), handlerContext());
+      req = new Request(app, makeAPIGatewayRequestEvent(), handlerContext());
       resp = new Response(app, req, cb);
    });
 
