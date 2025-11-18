@@ -1,6 +1,6 @@
 import { Callback, Context } from 'aws-lambda';
 import Router from './Router';
-import { RequestEvent, HandlerContext } from './request-response-types';
+import { RequestEvent, HandlerContext, ResponseResult } from './request-response-types';
 import { isUndefined, StringUnknownMap, Writable } from '@silvermine/toolbox';
 import { Request, Response } from '.';
 import { isErrorWithStatusCode } from './interfaces';
@@ -85,6 +85,9 @@ export default class Application extends Router {
     * @param evt The event provided to the Lambda handler
     * @param context The context provided to the Lambda handler
     * @param cb The callback provided to the Lambda handler
+    *
+    * @deprecated Use `runAsync()` instead. Callback-style handlers are deprecated in
+    *             Node.js 24.
     */
    public run(evt: RequestEvent, context: Context, cb: Callback): void {
       const req = new Request(this, evt, this._createHandlerContext(context)),
@@ -97,6 +100,25 @@ export default class Application extends Router {
          } else {
             resp.sendStatus(404);
          }
+      });
+   }
+
+   /**
+    * Run the app for a Lambda invocation using async/await pattern.
+    *
+    * @param evt The event provided to the Lambda handler
+    * @param context The context provided to the Lambda handler
+    * @returns A Promise that resolves with the response result or rejects with an error
+    */
+   public runAsync(evt: RequestEvent, context: Context): Promise<ResponseResult> {
+      return new Promise((resolve, reject) => {
+         this.run(evt, context, (error, result) => {
+            if (error) {
+               reject(error);
+            } else {
+               resolve(result as ResponseResult);
+            }
+         });
       });
    }
 
