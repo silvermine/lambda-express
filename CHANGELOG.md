@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [our coding standards][commit-messages] for commit guidelines.
 
+## [0.4.0](https://github.com/silvermine/lambda-express/compare/v0.3.1...v0.4.0) (2025-12-21)
+
+
+### Features
+
+* add support for promise-based handlers ([f936fe0](https://github.com/silvermine/lambda-express/commit/f936fe07fdbac0f8eaff9deec64e15e2cbeca1a5))
+
+
 ### [0.3.1](https://github.com/silvermine/lambda-express/compare/v0.3.0...v0.3.1) (2022-12-23)
 
 
