@@ -7,7 +7,7 @@ import {
    apiGatewayRequestRawQuery,
 } from './samples';
 import { spy, SinonSpy, assert } from 'sinon';
-import { Application, Request, Response, Router } from '../src';
+import { Application, Request, Response, Router, createAsyncHandler } from '../src';
 import { RequestEvent, ResponseResult } from '../src/request-response-types';
 import { NextCallback, IRoute, IRouter, ErrorWithStatusCode } from '../src/interfaces';
 import { expect } from 'chai';
@@ -923,6 +923,142 @@ describe('integration tests', () => {
       expect(cb.firstCall.args[0]).to.eql(undefined);
       expect(cb.firstCall.args[1].statusCode).to.eql(418);
       expect(cb.firstCall.args[1].body).to.eql('URIError handled by error handler');
+   });
+
+   describe('runAsync method', () => {
+
+      it('returns a Promise that resolves with the response result', async () => {
+         app.get('/hello', (_req: Request, resp: Response): void => {
+            resp.json({ message: 'Hello World' });
+         });
+
+         const evt = makeRequestEvent('/hello'),
+               result = await app.runAsync(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(200);
+         expect(result.body).to.eql(JSON.stringify({ message: 'Hello World' }));
+         expect(result.isBase64Encoded).to.eql(false);
+         expect(result.multiValueHeaders['Content-Type']).to.eql([ 'application/json; charset=utf-8' ]);
+      });
+
+      it('returns a Promise that resolves when an error occurs', async () => {
+         app.get('/error', (_req: Request, _resp: Response): void => { // eslint-disable-line @typescript-eslint/no-unused-vars
+            const err: ErrorWithStatusCode<Error> = new Error('Test error') as ErrorWithStatusCode<Error>;
+
+            err.statusCode = 500;
+            throw err;
+         });
+
+         const evt = makeRequestEvent('/error');
+
+         let errorThrown = false;
+
+         try {
+            await app.runAsync(evt, handlerContext());
+         } catch(err) {
+            errorThrown = true;
+         }
+
+         // Since the error is caught by the last resort handler, it should resolve, not
+         // reject
+         expect(errorThrown).to.eql(false);
+      });
+
+      it('works with async middleware and handlers', async () => {
+         app.use(async (_req: Request, resp: Response, next: NextCallback): Promise<void> => {
+            resp.append('X-Async-Middleware', 'ran');
+            next();
+         });
+
+         app.get('/async', async (_req: Request, resp: Response): Promise<void> => {
+            resp.json({ async: true });
+         });
+
+         const evt = makeRequestEvent('/async'),
+               result = await app.runAsync(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(200);
+         expect(result.body).to.eql(JSON.stringify({ async: true }));
+         expect(result.multiValueHeaders['X-Async-Middleware']).to.eql([ 'ran' ]);
+      });
+
+      it('works with ALB events', async () => {
+         app.get('/alb-test', (_req: Request, resp: Response): void => {
+            resp.send('ALB response');
+         });
+
+         const evt = makeRequestEvent('/alb-test', albRequest()),
+               result = await app.runAsync(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(200);
+         expect(result.statusDescription).to.eql('200 OK');
+         expect(result.body).to.eql('ALB response');
+      });
+
+      it('returns 404 when no matching route is found', async () => {
+         const evt = makeRequestEvent('/nonexistent'),
+               result = await app.runAsync(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(404);
+      });
+
+   });
+
+   describe('createAsyncHandler helper', () => {
+
+      it('creates an async handler that works correctly', async () => {
+         app.get('/test', (_req: Request, resp: Response): void => {
+            resp.json({ test: 'success' });
+         });
+
+         const handler = createAsyncHandler(app),
+               evt = makeRequestEvent('/test'),
+               result = await handler(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(200);
+         expect(result.body).to.eql(JSON.stringify({ test: 'success' }));
+      });
+
+      it('creates a handler that works with middleware', async () => {
+         app.use((_req: Request, resp: Response, next: NextCallback): void => {
+            resp.append('X-Middleware', 'executed');
+            next();
+         });
+
+         app.get('/middleware-test', (_req: Request, resp: Response): void => {
+            resp.send('OK');
+         });
+
+         const handler = createAsyncHandler(app),
+               evt = makeRequestEvent('/middleware-test'),
+               result = await handler(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(200);
+         expect(result.body).to.eql('OK');
+         expect(result.multiValueHeaders['X-Middleware']).to.eql([ 'executed' ]);
+      });
+
+      it('creates a handler that properly handles errors', async () => {
+         app.get('/error-test', (_req: Request, _resp: Response): void => { // eslint-disable-line @typescript-eslint/no-unused-vars
+            throw new Error('Test error');
+         });
+
+         const handler = createAsyncHandler(app),
+               evt = makeRequestEvent('/error-test'),
+               result = await handler(evt, handlerContext());
+
+         // Error is caught by last resort handler
+         expect(result.statusCode).to.eql(500);
+      });
+
+      it('creates a handler that returns 404 for non-existent routes', async () => {
+         const handler = createAsyncHandler(app),
+               evt = makeRequestEvent('/does-not-exist'),
+               result = await handler(evt, handlerContext());
+
+         expect(result.statusCode).to.eql(404);
+      });
+
    });
 
 });

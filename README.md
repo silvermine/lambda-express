@@ -35,8 +35,7 @@ familiar will accelerate your development, allowing you to focus on your busines
 
 ## Usage
 
-Here's a simple example to get you up and running quickly (assumes your execution environment
-is Node 12.x):
+Here's a simple example to get you up and running quickly:
 
 `npm i @silvermine/lambda-express`
 
@@ -65,19 +64,31 @@ app.get('/my-endpoint', async (request: Request, response: Response) => {
    response.send('Hello world!');
 });
 
-export const handler = (event: RequestEvent, context: Context, callback: Callback): void => {
-   app.run(event, context, callback);
-};
+// Use the helper function to create an async handler (Recommended for Node.js 18+)
+export const handler = createAsyncHandler(app);
 
-export default handler;
+// Or use runAsync directly:
+//
+// export const handler = async (event: RequestEvent, context: Context): Promise<ResponseResult> => {
+//    return app.runAsync(event, context);
+// };
+
+// Or for Node.js <24.x, use the callback style:
+//
+// export const handler = (event: RequestEvent, context: Context, callback: Callback): void => {
+//    app.run(event, context, callback);
+// };
 ```
 
 At this point you should be able to compile, bundle, and deploy this Lambda.
 Assuming you have configured APIGW or ALB to forward traffic to your Lambda,
 you will now have a very basic working API!
 
+**Note:** Both handler styles (async/await and callback) are supported for Node.js <24.x.
+However, the async/await style is recommended for Node.js 18+ and is required for Node.js
+24+.
+
 ## License
 
 This software is released under the MIT license. See [the license file](LICENSE) for more
 details.
-
