@@ -27,8 +27,8 @@ export {
  * ```
  */
 export function createAsyncHandler(app: Application): (event: RequestEvent, context: Context) => Promise<ResponseResult> {
-   return (event: RequestEvent, context: Context): Promise<ResponseResult> => {
-      return app.runAsync(event, context);
+   return async (event: RequestEvent, context: Context): Promise<ResponseResult> => {
+      return await app.runAsync(event, context);
    };
 }
 
