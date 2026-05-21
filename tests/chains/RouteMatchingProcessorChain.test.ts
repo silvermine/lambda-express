@@ -1,6 +1,5 @@
-import _ from 'underscore';
 import { Application, Request, Response } from '../../src';
-import { apiGatewayRequest, handlerContext } from '../samples';
+import { handlerContext, makeAPIGatewayRequestEvent } from '../samples';
 import { expect } from 'chai';
 import { RouteMatchingProcessorChain } from '../../src/chains/RouteMatchingProcessorChain';
 import { PathParams } from '../../src/interfaces';
@@ -22,7 +21,7 @@ describe('RouteMatchingProcessorChain', () => {
    describe('matches', () => {
       const test = (method: string | undefined, routes: PathParams, path: string, expectation: boolean, caseSensitive = false): void => {
          let app = new Application(),
-             req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
+             req = new Request(app, makeAPIGatewayRequestEvent({ path: path }), handlerContext()),
              chain = new RouteMatchingProcessorChain([], routes, method, caseSensitive);
 
          expect(chain.matches(req)).to.eql(expectation);
@@ -138,7 +137,7 @@ describe('RouteMatchingProcessorChain', () => {
    describe('makeSubRequest', () => {
       const test = (routes: PathParams, path: string, expectation: StringMap): void => {
          let app = new Application(),
-             req = new Request(app, _.extend(apiGatewayRequest(), { path: path }), handlerContext()),
+             req = new Request(app, makeAPIGatewayRequestEvent({ path: path }), handlerContext()),
              chain = new TestRouteMatchingProcessorChain([], routes),
              subReq = chain._makeSubRequest(req);
 
@@ -154,7 +153,7 @@ describe('RouteMatchingProcessorChain', () => {
       // sending this character using UTF-8 encoding (i.e. %C3%AA)
       const path = '/hello/%EA',
             app = new Application(),
-            req = new Request(app, _.extend(apiGatewayRequest(), { path }), handlerContext()),
+            req = new Request(app, makeAPIGatewayRequestEvent({ path }), handlerContext()),
             chain = new RouteMatchingProcessorChain([], '/hello/:name'),
             resp = new Response(app, req, spy()),
             done = spy();
